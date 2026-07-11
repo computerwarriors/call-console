@@ -67,7 +67,7 @@
   }
   .topbar-btn.primary:hover{background:linear-gradient(180deg,#F5A945,#E8912A);color:#241202}
 
-  .work{max-width:780px;width:100%;margin:0 auto;padding:32px 24px 72px;flex:1}
+  .work{max-width:1060px;width:100%;margin:0 auto;padding:32px 24px 72px;flex:1}
 
   /* ================= home ================= */
   .greet-home{margin-bottom:34px}
@@ -287,6 +287,23 @@
   .embed-open{display:block;text-align:center;font-size:12.5px;font-weight:600;color:var(--accent-deep);text-decoration:none;padding:11px;border-top:1px solid var(--line-soft);background:var(--paper-2)}
   .embed-open:hover{background:var(--accent-soft)}
 
+  /* ================= split screen ================= */
+  .panel-head{padding:26px 30px 4px}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:16px 30px 28px;align-items:start}
+  .split.solo{grid-template-columns:1fr}
+  .pane{min-width:0}
+  .pane-script{position:sticky;top:20px;align-self:start}
+  .pane-choices{min-width:0}
+  .pane-title{font-family:var(--disp);font-size:15px;font-weight:600;letter-spacing:.2px;margin:0 0 3px;color:var(--ink)}
+  .pane-sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .split .scroll-list{max-height:56vh}
+  @media (max-width:880px){
+    .split{grid-template-columns:1fr;gap:16px;padding:14px 18px 22px}
+    .pane-script{position:static;top:auto}
+    .panel-head{padding:22px 18px 2px}
+    .split .scroll-list{max-height:46vh}
+  }
+
   /* ================= model search + scroll ================= */
   .model-search{position:relative;margin:2px 0 12px}
   .model-search input{width:100%;box-sizing:border-box;font-family:var(--body);font-size:15px;color:var(--ink);
@@ -428,6 +445,7 @@ const FLOWS = {
     icon:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
     steps:[
       { id:"issue", title:"What kind of computer issue?",
+        say:"Sure, we can help with that \u2014 is it acting more like a software problem, or does it look like a hardware issue?",
         sub:"Pick the closest match.",
         choices:[
           {label:"Software / Performance Issue",sub:"Slow, virus, pop-ups, freezing, updates, software problems",next:"sw"},
@@ -718,8 +736,9 @@ function renderDevice(dr){
 
 function renderBrand(){
   const rows=DEVICE_BRANDS.map(b=>`<button class="choice" data-b="${b.id}"><span class="lab">${esc(b.label)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
-  stage.innerHTML=drChrome(DEVICE_META.color,"Phone, iPad & Console",4,1)
-    + `<div class="panel" style="--flow:${DEVICE_META.color}"><div class="panel-body"><h2 class="step-title">What are we working on?</h2><p class="step-sub">Pick the brand or device family.</p><div class="choices">${rows}</div></div></div>`;
+  const left=sayBlock("Sure, we can help with that \u2014 what kind of device is it?");
+  const right=`<div class="choices">${rows}</div>`;
+  stage.innerHTML=screen({flowbar:drChrome(DEVICE_META.color,"Phone, iPad & Console",4,1),accent:DEVICE_META.color,title:"What are we working on?",sub:"Pick the brand or device family.",left,right});
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-b]').forEach(btn=>btn.onclick=()=>{
     const b=BRAND_BY_ID[btn.dataset.b];
@@ -732,36 +751,33 @@ function renderModel(){
   const b=BRAND_BY_ID[state.dr.brandId];
   const list=modelsForPool(b.pool);
   const contBtn=`<button class="choice" data-m=""><span class="lab">Continue \u2014 price it by hand</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
-  let body, feedNote='', search='';
+  let right, feedNote='', search='';
   if(PRICING.loading){
-    body=noteBlock("Loading current prices from the wiki\u2026")+`<div class="choices">${contBtn}</div>`;
+    right=noteBlock("Loading current prices from the wiki\u2026")+`<div class="choices">${contBtn}</div>`;
   } else if(list.length){
     feedNote=`<div class="feed-line">${PRICING.updated?`Prices live from the wiki \u00B7 ${esc(PRICING.updated)}`:'Prices live from the wiki'}</div>`;
     if(list.length>6) search=`<div class="model-search"><span class="ms-ic">${ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')}</span><input type="text" id="modelSearch" placeholder="Search ${esc(b.label)} models\u2026" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`;
     const rows=list.map(m=>`<button class="choice" data-m="${esc(m)}" data-name="${esc(m.toLowerCase())}"><span class="lab">${esc(m)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
     const other=`<button class="choice model-other" data-m="" data-name=""><span class="lab">Other / not listed<small>Price it by hand</small></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
-    body=`<div class="choices scroll-list" id="modelList">${rows}<div class="no-match" id="noMatch" style="display:none">No match \u2014 use \u201COther / not listed\u201D below.</div>${other}</div>`;
+    right=`${feedNote}${search}<div class="choices scroll-list" id="modelList">${rows}<div class="no-match" id="noMatch" style="display:none">No match \u2014 use \u201COther / not listed\u201D below.</div>${other}</div>`;
   } else {
-    body=noteBlock(PRICING.ok?"No models listed for this brand yet \u2014 continue and price it by hand.":"Pricing feed unavailable \u2014 continue and price it by hand.","warn")+`<div class="choices">${contBtn}</div>`;
+    right=noteBlock(PRICING.ok?"No models listed for this brand yet \u2014 continue and price it by hand.":"Pricing feed unavailable \u2014 continue and price it by hand.","warn")+`<div class="choices">${contBtn}</div>`;
   }
-  stage.innerHTML=drChrome(b.color,b.label,4,2)
-    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body"><h2 class="step-title">${esc(b.label)} \u2014 which device?</h2>${sayBlock(b.prompt)}${feedNote}${search}${body}</div></div>`;
+  const left=sayBlock(b.prompt);
+  stage.innerHTML=screen({flowbar:drChrome(b.color,b.label,4,2),accent:b.color,title:`${esc(b.label)} \u2014 which device?`,left,right});
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-m]').forEach(btn=>btn.onclick=()=>drGo({stage:"repair",brandId:b.id,model:btn.dataset.m||null}));
   const sb=document.getElementById('modelSearch');
   if(sb){
-    const listEl=document.getElementById('modelList');
-    const noMatch=document.getElementById('noMatch');
+    const listEl=document.getElementById('modelList'), noMatch=document.getElementById('noMatch');
     const filter=()=>{
-      const q=sb.value.trim().toLowerCase();
-      let shown=0;
+      const q=sb.value.trim().toLowerCase(); let shown=0;
       listEl.querySelectorAll('[data-name]').forEach(el=>{
         if(el.classList.contains('model-other')) return;
-        const hit = !q || el.dataset.name.indexOf(q)!==-1;
-        el.style.display = hit ? '' : 'none';
-        if(hit) shown++;
+        const hit=!q||el.dataset.name.indexOf(q)!==-1;
+        el.style.display=hit?'':'none'; if(hit)shown++;
       });
-      noMatch.style.display = shown ? 'none' : '';
+      noMatch.style.display=shown?'none':'';
     };
     sb.addEventListener('input',filter);
     setTimeout(()=>sb.focus(),40);
@@ -773,7 +789,7 @@ function renderRepair(){
   const wikiRepairs = model ? modelRepairs(b.pool,model) : [];
   let opts=[];
   if(wikiRepairs.length){
-    opts = wikiRepairs.map(r=>({label:r,rt:r}));                 // exact wiki labels, priced
+    opts = wikiRepairs.map(r=>({label:r,rt:r}));
     if(b.family==="console") opts.push({label:"Full Cleaning / Maintenance",sub:"Flat $100 \u00B7 excludes Switch",rt:"__cleaning"});
     opts.push({label:"Other / Not Sure",sub:"Price it by hand",rt:"__other"});
   } else {
@@ -782,8 +798,8 @@ function renderRepair(){
   }
   const rows=opts.map((o,i)=>`<button class="choice" data-i="${i}"><span class="lab">${esc(o.label)}${o.sub?`<small>${esc(o.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
   const who=model?esc(model):esc(b.label);
-  stage.innerHTML=drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,3)
-    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body"><h2 class="step-title">${who} \u2014 what's the repair?</h2><div class="choices">${rows}</div></div></div>`;
+  const left=sayBlock("And what seems to be going on with it?");
+  stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,3),accent:b.color,title:`${who} \u2014 what's the repair?`,left,right:`<div class="choices">${rows}</div>`});
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-i]').forEach(btn=>btn.onclick=()=>drGo({stage:"result",brandId:b.id,model:model,repairType:opts[+btn.dataset.i].rt}));
 }
@@ -792,45 +808,39 @@ function renderResult(){
   const b=BRAND_BY_ID[state.dr.brandId], fam=DEVICE_FAMILY[b.family], model=state.dr.model, rt=state.dr.repairType;
   const turn=turnLine(b), noun=b.noun;
 
-  // Resolve a wiki price where we can.
   let feed=null, cls, repairLabel;
   if(rt==="__cleaning"){ feed={price:100,warranty:"Service only \u2014 no part warranty"}; cls="cleaning"; repairLabel="Full Cleaning / Maintenance"; }
   else if(rt==="__other"){ cls="other"; repairLabel="Other / Not Sure"; }
   else { repairLabel=rt; cls=classifyRepair(rt); if(model) feed=modelPrice(b.pool,model,rt); }
 
   const who=model?esc(model):esc(b.label);
-  const meta=`<div class="result-meta"><span>${esc(repairLabel)}</span><span class="dotsep">\u00B7</span><span>${esc(turnMeta(b))}</span></div>`;
+  const sub=`<div class="result-meta"><span>${esc(repairLabel)}</span><span class="dotsep">\u00B7</span><span>${esc(turnMeta(b))}</span></div>`;
 
-  let inner;
+  // LEFT = price + what to say + coverage
+  let left='';
   if(feed){
-    // Wiki price shown straight through — no breakdown.
-    const say=sayBlock(sayAfterFor(cls,noun,turn,repairLabel,feed.warranty),"Say to caller");
-    inner=`<div class="result-wrap">
-      <div class="pricehero"><div class="ph-head">Price <span class="feed-tag okfeed">${PRICING.updated?`wiki \u00B7 ${esc(PRICING.updated)}`:'from wiki'}</span></div>
-        <div class="ph-amt">${money(feed.price)}<span class="ph-plus">+ tax</span></div>
-        ${feed.warranty?`<div class="ph-warr">${esc(feed.warranty)}</div>`:''}</div>
-      ${say}
-      <div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,feed.warranty))}</div>
-    </div>`;
+    left=`<div class="pricehero"><div class="ph-head">Price <span class="feed-tag okfeed">${PRICING.updated?`wiki \u00B7 ${esc(PRICING.updated)}`:'from wiki'}</span></div>`
+      + `<div class="ph-amt">${money(feed.price)}<span class="ph-plus">+ tax</span></div>`
+      + (feed.warranty?`<div class="ph-warr">${esc(feed.warranty)}</div>`:'') + `</div>`
+      + sayBlock(sayAfterFor(cls,noun,turn,repairLabel,feed.warranty),"Say to caller")
+      + `<div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,feed.warranty))}</div>`;
+  } else if(rt==="__other"){
+    const cats=b.family==="console"?["Other"]:["Charging Port","Back Glass / Housing","Other Small Parts"];
+    left=calcBlock({device:fam.device,labor:fam.labor,categories:cats,hint:"not in wiki"})
+      + sayBlock("We can help with that \u2014 let me pull up the exact repair and part availability so I can give you the right price and turnaround instead of guessing.")
+      + `<div class="cov"><span class="ck">Coverage</span><span class="c-cov">${esc(coverageFor(fam.device,cats[0]))}</span></div>`;
   } else {
-    // Manual fallback — markup calculator.
-    let s;
-    if(rt==="__other"){
-      const cats=b.family==="console"?["Other"]:["Charging Port","Back Glass / Housing","Other Small Parts"];
-      s={device:fam.device,labor:fam.labor,categories:cats,hint:"not in wiki"};
-      const say=sayBlock("We can help with that \u2014 let me pull up the exact repair and part availability so I can give you the right price and turnaround instead of guessing.");
-      inner=`<div class="result-wrap">${calcBlock(s)}${say}<div class="cov"><span class="ck">Coverage</span><span class="c-cov">${esc(coverageFor(fam.device,cats[0]))}</span></div></div>`;
-    } else {
-      const cat=calcCategoryFor(cls);
-      s={device:fam.device,labor:fam.labor,category:cat,noCost:cls==="cleaning",hint:"not in wiki"};
-      const say=sayBlock(sayAfterFor(cls,noun,turn,repairLabel,""),"Say after price lookup");
-      inner=`<div class="result-wrap">${calcBlock(s)}${say}<div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,""))}</div></div>`;
-    }
+    const cat=calcCategoryFor(cls);
+    left=calcBlock({device:fam.device,labor:fam.labor,category:cat,noCost:cls==="cleaning",hint:"not in wiki"})
+      + sayBlock(sayAfterFor(cls,noun,turn,repairLabel,""),"Say after price lookup")
+      + `<div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,""))}</div>`;
   }
 
-  stage.innerHTML=drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,4)
-    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body"><h2 class="step-title">${who}</h2>${meta}${inner}${closingBlock(false)}${checklistBlock(CHECKLIST)}</div>
-       <div class="footer-nav"><button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button></div></div>`;
+  // RIGHT = close the call + checklist
+  const right=closingBlock(false)+checklistBlock(CHECKLIST);
+
+  const footer=`<button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
+  stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,4),accent:b.color,title:who,sub,left,right,footer});
 
   stage.querySelectorAll('#drBack').forEach(x=>x.onclick=drBack);
   document.getElementById('drFinish').onclick=goHome;
@@ -861,25 +871,32 @@ function wireChecklist(){
 }
 
 
+function screen(o){
+  const left=o.left||'', right=o.right||'';
+  const split = left
+    ? `<div class="split"><div class="pane pane-script">${left}</div><div class="pane pane-choices">${right}</div></div>`
+    : `<div class="split solo"><div class="pane pane-choices">${right}</div></div>`;
+  let h=(o.flowbar||'');
+  h+=`<div class="panel${o.home?' greet-home':''}" style="--flow:${o.accent||'var(--accent)'};--flow-soft:${o.accentSoft||'#EEF0F4'}">`;
+  h+=`<div class="panel-head">`;
+  if(o.eyebrow) h+=`<div class="eyebrow">${esc(o.eyebrow)}</div>`;
+  if(o.title) h+=`<h2 class="step-title">${o.title}</h2>`;
+  if(o.sub) h+=`<div class="step-sub">${o.sub}</div>`;
+  h+=`</div>`+split;
+  if(o.footer) h+=`<div class="footer-nav">${o.footer}</div>`;
+  h+=`</div>`;
+  return h;
+}
+
 function renderHome(){
   const tile=(id,f,isDevice)=>`<button class="tile" data-${isDevice?'device':'flow'}="${id}" style="--tint:${f.color||f.tint};--tint-soft:${f.tintSoft||'#EEF0F4'}"><span class="ic">${ic(f.icon)}</span><span class="txt"><h3>${esc(f.label)}</h3><p>${esc(f.desc)}</p></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
-  const dsoft={computer:FLOWS.computer.tintSoft,support:FLOWS.support.tintSoft};
-  const tiles=[
-    tile('computer',FLOWS.computer,false),
-    tile('device',DEVICE_META,true),
-    tile('support',FLOWS.support,false)
-  ].join('');
-  stage.innerHTML=`
-    <div class="panel greet-home"><div class="panel-body">
-      <div class="eyebrow">Every call starts here</div>
-      <h2 class="step-title">Greet the caller</h2>
-      ${sayBlock("Thanks for calling Computer Warriors, this is [name]. Who do I have the pleasure of speaking with?")}
-      ${noteBlock("Get the customer's name and use it naturally during the call.")}
-      ${sayBlock("Hey [name], how can we help you today?","Then say")}
-      ${noteBlock("Ask about the device type, the issue, or whether they need remote / onsite help.")}
-    </div></div>
-    <div class="home-head"><h2>What's the call about?</h2><p>Pick the closest match — switch anytime with Home.</p></div>
-    <div class="tiles">${tiles}</div>`;
+  const tiles=[tile('computer',FLOWS.computer,false),tile('device',DEVICE_META,true),tile('support',FLOWS.support,false)].join('');
+  const left=sayBlock("Thanks for calling Computer Warriors, this is [name]. Who do I have the pleasure of speaking with?")
+    + noteBlock("Get the customer's name and use it naturally during the call.")
+    + sayBlock("Hey [name], how can we help you today?","Then say")
+    + noteBlock("Ask about the device type, the issue, or whether they need remote / onsite help.");
+  const right=`<div class="pane-title">What's the call about?</div><div class="pane-sub">Pick the closest match \u2014 switch anytime with Home.</div><div class="tiles">${tiles}</div>`;
+  stage.innerHTML=screen({home:true,accent:'var(--accent)',eyebrow:"Every call starts here",title:"Greet the caller",left,right});
   stage.querySelectorAll('.tile').forEach(t=>t.onclick=()=> t.dataset.device ? startDevice() : startFlow(t.dataset.flow));
 }
 
@@ -913,26 +930,31 @@ function startFlow(id){ state={flowId:id,idx:0,actions:new Set()}; history=[]; r
 
 function renderStep(){
   const flow=FLOWS[state.flowId], step=flow.steps[state.idx], total=flow.steps.length;
-  let h=`<div class="flowbar"><button class="back" id="backBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag"><span class="dot" style="background:${flow.color}"></span>${esc(flow.label)}</span>`;
-  if(total>1) h+=`<span class="steptrack">Step ${state.idx+1} / ${total}</span>`;
-  h+=`</div><div class="panel" style="--flow:${flow.color};--flow-soft:${flow.tintSoft}"><div class="panel-body"><h2 class="step-title">${esc(step.title)}</h2>`;
-  if(step.sub) h+=`<p class="step-sub">${esc(step.sub)}</p>`;
-  if(step.say) h+=sayBlock(step.say);
-  if(step.note) h+=noteBlock(step.note,step.warn);
-  if(step.embed) h+=embedBlock(step.embed);
-  if(step.sayAfterEmbed) h+=sayBlock(step.sayAfterEmbed,"Once submitted, say");
-  if(step.extras) h+=extrasBlock(step.extras);
-  if(step.sections){ h+=`<div class="sec-lbl">Pricing &amp; coverage</div>`+step.sections.map(sectionBlock).join(''); }
-  if(step.choices) h+=choicesBlock(step.choices);
-  if(step.close) h+=closingBlock(step.noAsk);
-  if(step.checklist) h+=checklistBlock(step.checklist);
-  h+=`</div>`;
-  h+=`<div class="footer-nav">`;
-  if(step.end) h+=`<button class="btn-ghost" id="prevBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="finishBtn">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
-  else if(step.choices) h+=`<button class="btn-ghost" id="prevBtn">Back</button><span class="push hint">Pick an option to continue</span>`;
-  else h+=`<button class="btn-ghost" id="prevBtn">Back</button><button class="btn-primary push" id="nextBtn">Next ${ic('<path d="M9 18l6-6-6-6"/>')}</button>`;
-  h+=`</div></div>`;
-  stage.innerHTML=h;
+  let flowbar=`<div class="flowbar"><button class="back" id="backBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag"><span class="dot" style="background:${flow.color}"></span>${esc(flow.label)}</span>`;
+  if(total>1) flowbar+=`<span class="steptrack">Step ${state.idx+1} / ${total}</span>`;
+  flowbar+=`</div>`;
+
+  // LEFT = what to say/read
+  let left='';
+  if(step.say) left+=sayBlock(step.say);
+  if(step.note) left+=noteBlock(step.note,step.warn);
+
+  // RIGHT = what to do
+  let right='';
+  if(step.embed) right+=embedBlock(step.embed);
+  if(step.sayAfterEmbed) right+=sayBlock(step.sayAfterEmbed,"Once submitted, say");
+  if(step.extras) right+=extrasBlock(step.extras);
+  if(step.sections){ right+=`<div class="sec-lbl">Pricing &amp; coverage</div>`+step.sections.map(sectionBlock).join(''); }
+  if(step.choices) right+=choicesBlock(step.choices);
+  if(step.close) right+=closingBlock(step.noAsk);
+  if(step.checklist) right+=checklistBlock(step.checklist);
+
+  let footer='';
+  if(step.end) footer=`<button class="btn-ghost" id="prevBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="finishBtn">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
+  else if(step.choices) footer=`<button class="btn-ghost" id="prevBtn">Back</button><span class="push hint">Pick an option to continue</span>`;
+  else footer=`<button class="btn-ghost" id="prevBtn">Back</button><button class="btn-primary push" id="nextBtn">Next ${ic('<path d="M9 18l6-6-6-6"/>')}</button>`;
+
+  stage.innerHTML=screen({flowbar,accent:flow.color,accentSoft:flow.tintSoft,title:esc(step.title),sub:step.sub?esc(step.sub):'',left,right,footer});
   wireStep(step);
 }
 
@@ -978,8 +1000,8 @@ function setupCalc(el){
   const device=el.dataset.device, fixed=el.dataset.category;
   const cost=el.querySelector('.c-cost'), labor=el.querySelector('.c-labor'), catSel=el.querySelector('.c-cat');
   const cust=el.querySelector('.c-cust'), mraWrap=el.querySelector('.c-mra-wrap'), mra=el.querySelector('.c-mra');
-  const body=el.closest('.acc-body')||el.closest('.result-wrap')||el.parentElement;
-  const sayPrice=body?body.querySelector('.say-price'):null, cov=body?body.querySelector('.c-cov'):null;
+  const scope=el.closest('.acc-body')||stage;
+  const sayPrice=scope.querySelector('.say-price'), cov=scope.querySelector('.c-cov');
   function currentCat(){ return catSel?catSel.value:fixed; }
   function run(){
     const cat=currentCat();
