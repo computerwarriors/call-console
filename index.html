@@ -291,6 +291,22 @@
   .embed-open{display:block;text-align:center;font-size:12.5px;font-weight:600;color:var(--accent-deep);text-decoration:none;padding:11px;border-top:1px solid var(--line-soft);background:var(--paper-2)}
   .embed-open:hover{background:var(--accent-soft)}
 
+  /* ================= model search + scroll ================= */
+  .model-search{position:relative;margin:2px 0 12px}
+  .model-search input{width:100%;box-sizing:border-box;font-family:var(--body);font-size:15px;color:var(--ink);
+    padding:12px 14px 12px 40px;border:1px solid var(--line);border-radius:10px;background:var(--card);outline:none;transition:border-color .15s,box-shadow .15s}
+  .model-search input:focus{border-color:var(--flow,#3A6EA5);box-shadow:0 0 0 3px color-mix(in srgb,var(--flow,#3A6EA5) 16%,transparent)}
+  .model-search input::placeholder{color:var(--faint)}
+  .model-search .ms-ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--faint);pointer-events:none}
+  .model-search .ms-ic svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2}
+  .scroll-list{max-height:46vh;overflow-y:auto;padding-right:4px;-webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .scroll-list::-webkit-scrollbar{width:8px}
+  .scroll-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+  .scroll-list::-webkit-scrollbar-track{background:transparent}
+  .no-match{padding:14px 4px;color:var(--faint);font-size:13.5px;text-align:center}
+  .model-other{border-style:dashed}
+
   /* ================= wiki price hero ================= */
   .pricehero{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:2px 0 18px;background:linear-gradient(180deg,#FFFFFF,#FBFCF9);box-shadow:var(--sh-1)}
   .ph-head{font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
@@ -717,20 +733,40 @@ function renderModel(){
   const b=BRAND_BY_ID[state.dr.brandId];
   const list=modelsForPool(b.pool);
   const contBtn=`<button class="choice" data-m=""><span class="lab">Continue \u2014 price it by hand</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
-  let body, feedNote='';
+  let body, feedNote='', search='';
   if(PRICING.loading){
     body=noteBlock("Loading current prices from the wiki\u2026")+`<div class="choices">${contBtn}</div>`;
   } else if(list.length){
     feedNote=`<div class="feed-line">${PRICING.updated?`Prices live from the wiki \u00B7 ${esc(PRICING.updated)}`:'Prices live from the wiki'}</div>`;
-    const rows=list.map(m=>`<button class="choice" data-m="${esc(m)}"><span class="lab">${esc(m)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
-    body=`<div class="choices">${rows}<button class="choice" data-m=""><span class="lab">Other / not listed</span><small>Price it by hand</small><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button></div>`;
+    if(list.length>6) search=`<div class="model-search"><span class="ms-ic">${ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')}</span><input type="text" id="modelSearch" placeholder="Search ${esc(b.label)} models\u2026" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`;
+    const rows=list.map(m=>`<button class="choice" data-m="${esc(m)}" data-name="${esc(m.toLowerCase())}"><span class="lab">${esc(m)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
+    const other=`<button class="choice model-other" data-m="" data-name=""><span class="lab">Other / not listed<small>Price it by hand</small></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
+    body=`<div class="choices scroll-list" id="modelList">${rows}<div class="no-match" id="noMatch" style="display:none">No match \u2014 use \u201COther / not listed\u201D below.</div>${other}</div>`;
   } else {
     body=noteBlock(PRICING.ok?"No models listed for this brand yet \u2014 continue and price it by hand.":"Pricing feed unavailable \u2014 continue and price it by hand.","warn")+`<div class="choices">${contBtn}</div>`;
   }
   stage.innerHTML=drChrome(b.color,b.label,4,2)
-    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body"><h2 class="step-title">${esc(b.label)} \u2014 which device?</h2>${sayBlock(b.prompt)}${feedNote}${body}</div></div>`;
+    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body"><h2 class="step-title">${esc(b.label)} \u2014 which device?</h2>${sayBlock(b.prompt)}${feedNote}${search}${body}</div></div>`;
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-m]').forEach(btn=>btn.onclick=()=>drGo({stage:"repair",brandId:b.id,model:btn.dataset.m||null}));
+  const sb=document.getElementById('modelSearch');
+  if(sb){
+    const listEl=document.getElementById('modelList');
+    const noMatch=document.getElementById('noMatch');
+    const filter=()=>{
+      const q=sb.value.trim().toLowerCase();
+      let shown=0;
+      listEl.querySelectorAll('[data-name]').forEach(el=>{
+        if(el.classList.contains('model-other')) return;
+        const hit = !q || el.dataset.name.indexOf(q)!==-1;
+        el.style.display = hit ? '' : 'none';
+        if(hit) shown++;
+      });
+      noMatch.style.display = shown ? 'none' : '';
+    };
+    sb.addEventListener('input',filter);
+    setTimeout(()=>sb.focus(),40);
+  }
 }
 
 function renderRepair(){
