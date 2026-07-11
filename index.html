@@ -291,6 +291,16 @@
   .embed-open{display:block;text-align:center;font-size:12.5px;font-weight:600;color:var(--accent-deep);text-decoration:none;padding:11px;border-top:1px solid var(--line-soft);background:var(--paper-2)}
   .embed-open:hover{background:var(--accent-soft)}
 
+  /* ================= wiki price hero ================= */
+  .pricehero{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:2px 0 18px;background:linear-gradient(180deg,#FFFFFF,#FBFCF9);box-shadow:var(--sh-1)}
+  .ph-head{font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .ph-amt{font-family:var(--mono);font-size:38px;font-weight:600;color:var(--ink);letter-spacing:-1.5px;line-height:1}
+  .ph-plus{font-family:var(--body);font-size:13px;letter-spacing:.3px;color:var(--faint);font-weight:400;margin-left:9px}
+  .ph-warr{margin-top:9px;font-size:13px;font-weight:500;color:var(--good);background:var(--good-soft);border:1px solid #C9E2D5;border-radius:7px;padding:5px 11px;display:inline-block}
+  .feed-line{font-size:11.5px;color:var(--good);font-weight:500;margin:-8px 0 14px}
+  .feed-tag.okfeed{color:var(--good)}
+  .feed-tag.warnfeed{color:var(--accent-deep)}
+
   /* ================= device result ================= */
   .result-meta{display:flex;align-items:center;gap:9px;margin:-2px 0 18px;font-size:12.5px;color:var(--muted);font-weight:500}
   .result-meta .dotsep{color:var(--faint)}
@@ -346,7 +356,10 @@
 /* Live pricing feed — generated from the RepairShopr wiki by n8n.
    Point this at the raw JSON (GitHub raw, or a Vercel-served /pricing.json).
    Leave it as-is and the tool still works: techs just type the part cost by hand. */
-const PRICING_URL = "pricing.json";   // EDIT: e.g. https://raw.githubusercontent.com/<you>/<repo>/main/pricing.json
+// Live pricing feed. n8n commits these two files into this same repo,
+// so the app fetches them same-origin (no cross-repo, no auth, no CORS).
+// They stay in weekly/quarterly sync with the RepairShopr wiki + quote widget.
+const PRICING_URLS = ["prices-devices.json", "prices-consoles.json"];
 
 const SHOP = {
   hours: "Mon-Fri 9am-6pm, Sat 10am-2pm",
@@ -465,30 +478,33 @@ const round2=x=>Math.round(x*100)/100;
 const R495 =x=>round2(Math.ceil((x+0.05)/5)*5-0.05);
 const ceil10=x=>round2(Math.ceil((x+0.05)/10)*10-0.05);
 
-/* ---- live pricing feed ---- */
-let PRICING={models:[],updated:null,ok:false,error:null};
+/* ---- live pricing feed (reads the cw-pricing-data shape) ---- */
+let PRICING={cats:{},updated:null,ok:false,loading:true,error:null};
 async function loadPricing(){
   try{
-    const res=await fetch(PRICING_URL,{cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const d=await res.json();
-    if(!d||!Array.isArray(d.models)) throw new Error('bad shape');
-    PRICING={models:d.models,updated:d.updated||null,ok:true,error:null};
-  }catch(e){ PRICING={models:[],updated:null,ok:false,error:e.message}; }
+    const parts=await Promise.all(PRICING_URLS.map(u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})));
+    const cats={}; let updated=null;
+    for(const d of parts){
+      if(d&&d._generated) updated=String(d._generated).slice(0,10);
+      for(const k of Object.keys(d||{})){ if(k[0]==='_') continue; if(d[k]&&d[k].models) cats[k]=d[k]; }
+    }
+    if(!Object.keys(cats).length) throw new Error('no categories');
+    PRICING={cats,updated,ok:true,loading:false,error:null};
+  }catch(e){ PRICING={cats:{},updated:null,ok:false,loading:false,error:e.message}; }
 }
-// pool = "iPhone" | "Samsung" | "Pixel" | "iPad" | "Console" | "AnyPhone"
-function modelsFor(pool){
-  if(!PRICING.ok) return [];
-  if(pool==='AnyPhone') return PRICING.models.filter(m=>['iPhone','Samsung','Pixel'].includes(m.pool));
-  return PRICING.models.filter(m=>m.pool===pool);
-}
-function modelCost(pool,name,category){
-  const m=modelsFor(pool).find(x=>x.name===name);
-  if(!m||!m.costs) return null;
-  const v=m.costs[category];
-  if(v==null) return null;
-  if(typeof v==='object') return v;          // {price: 249.95} fixed price
-  return {cost:Number(v)};                   // plain number = part cost
+function poolCat(pool){ return PRICING.cats[String(pool||'').toLowerCase()]||null; }
+function modelsForPool(pool){ const c=poolCat(pool); return c?Object.keys(c.models):[]; }
+function modelRepairs(pool,model){ const c=poolCat(pool); const m=c&&c.models&&c.models[model]; return m?Object.keys(m):[]; }
+function modelPrice(pool,model,repair){ const c=poolCat(pool); const m=c&&c.models&&c.models[model]; const r=m&&m[repair]; return r?{price:Number(r.price),warranty:r.warranty||''}:null; }
+function classifyRepair(label){
+  const s=String(label).toLowerCase();
+  if(/batter/.test(s)) return 'battery';
+  if(/charg/.test(s)) return 'charging';
+  if(/back glass|housing|back cover/.test(s)) return 'backglass';
+  if(/hdmi/.test(s)) return 'hdmi';
+  if(/clean/.test(s)) return 'cleaning';
+  if(/screen|display/.test(s)) return 'screen';
+  return 'other';
 }
 
 function priceCalc(device,category,costIn,laborIn){
@@ -543,11 +559,9 @@ function extrasBlock(extras){
 function calcBlock(s){
   const catPicker = s.categories ? `<label class="c-field"><span class="cl">Repair</span><select class="c-cat">${s.categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></label>` : '';
   const costField = s.noCost ? '' : `<label class="c-field"><span class="cl">Part cost</span><input type="number" class="c-cost" placeholder="0.00" step="0.01" inputmode="decimal"></label>`;
-  const modelField = s.pool ? `<label class="c-field c-model-field"><span class="cl">Device</span><select class="c-model"><option value="">Loading…</option></select></label>` : '';
-  const fixedFeed = s.wikiPool ? `<span class="feed-tag" data-feed>·</span>` : '';
-  return `<div class="calc" data-device="${esc(s.device)}" data-category="${esc(s.category||'')}" data-pool="${esc(s.pool||'')}" data-wikipool="${esc(s.wikiPool||'')}" data-model="${esc(s.fixedModel||'')}">
-    <div class="calc-lbl">Pricing calculator${s.pool?`<span class="feed-tag" data-feed>·</span>`:fixedFeed}</div>
-    <div class="calc-inputs">${modelField}${catPicker}${costField}<label class="c-field"><span class="cl">Labor</span><input type="number" class="c-labor" value="${s.labor}" step="1" inputmode="numeric"></label></div>
+  return `<div class="calc" data-device="${esc(s.device)}" data-category="${esc(s.category||'')}">
+    <div class="calc-lbl">Manual price calculator${s.hint?` <span class="feed-tag warnfeed">${esc(s.hint)}</span>`:''}</div>
+    <div class="calc-inputs">${catPicker}${costField}<label class="c-field"><span class="cl">Labor</span><input type="number" class="c-labor" value="${s.labor}" step="1" inputmode="numeric"></label></div>
     <div class="calc-out">
       <div class="price-main">Customer price<b class="c-cust">$—<span class="plus">+ tax</span></b></div>
       <div class="price-mra c-mra-wrap" style="display:none">Price for MRA<b class="c-mra">—</b></div>
@@ -609,25 +623,22 @@ function choicesBlock(choices){
 function goHome(){ state=null; history=[]; renderHome(); }
 
 /* =========================================================================
-   DEVICE REPAIR — brand -> device -> repair type -> price + script
+   DEVICE REPAIR — brand -> device -> repair -> wiki price + script
+   Prices come straight from the RepairShopr-wiki feed. The manual markup
+   calculator only appears as a fallback (Other device / model or repair not
+   listed in the wiki).
    ========================================================================= */
 const DEVICE_META = { label:"Phone, iPad & Console Repair", color:"#E28313", tintSoft:"#FCEBD3",
-  desc:"Apple, Samsung, Pixel, iPad, console, or other device.",
+  desc:"iPhone, Samsung, Pixel, iPad, console, or other device.",
   icon:'<rect x="3" y="4" width="12" height="9" rx="1.5"/><path d="M6 20h6M9 16v4"/><rect x="16" y="9" width="6" height="11" rx="1.4"/>' };
 
 const DEVICE_BRANDS = [
-  { id:"apple",   label:"iPhone",       noun:"iPhone",  pool:"iPhone",  family:"phone",   stock:"stocked", color:"#3A6EA5",
-    prompt:"What model iPhone do you have, and what's going on with it?" },
-  { id:"samsung", label:"Samsung",      noun:"Samsung", pool:"Samsung", family:"phone",   stock:"order",   color:"#1B4DB1",
-    prompt:"What model Samsung do you have, and what's going on with it?" },
-  { id:"pixel",   label:"Pixel",        noun:"Pixel",   pool:"Pixel",   family:"phone",   stock:"order",   color:"#1E8E7E",
-    prompt:"What model Pixel do you have, and what's going on with it?" },
-  { id:"ipad",    label:"iPad",         noun:"iPad",    pool:"iPad",    family:"tablet",  stock:"queue",   color:"#7A4FBF",
-    prompt:"What model iPad do you have, and what's going on with it?" },
-  { id:"console", label:"Game Console", noun:"console", pool:"Console", family:"console", stock:"queue",   color:"#1F7A55",
-    prompt:"Which console is it, and what's it doing?" },
-  { id:"other",   label:"Other Device", noun:"device",  pool:null,      family:"phone",   stock:"order",   color:"#5A6472",
-    prompt:"What kind of device is it, and what's going on with it?" }
+  { id:"apple",   label:"iPhone",       noun:"iPhone",  pool:"iPhone",  family:"phone",   stock:"stocked", color:"#3A6EA5", prompt:"What model iPhone do you have, and what's going on with it?" },
+  { id:"samsung", label:"Samsung",      noun:"Samsung", pool:"Samsung", family:"phone",   stock:"order",   color:"#1B4DB1", prompt:"What model Samsung do you have, and what's going on with it?" },
+  { id:"pixel",   label:"Pixel",        noun:"Pixel",   pool:"Pixel",   family:"phone",   stock:"order",   color:"#1E8E7E", prompt:"What model Pixel do you have, and what's going on with it?" },
+  { id:"ipad",    label:"iPad",         noun:"iPad",    pool:"iPad",    family:"tablet",  stock:"queue",   color:"#7A4FBF", prompt:"What model iPad do you have, and what's going on with it?" },
+  { id:"console", label:"Game Console", noun:"console", pool:"Console", family:"console", stock:"queue",   color:"#1F7A55", prompt:"Which console is it, and what's it doing?" },
+  { id:"other",   label:"Other Device", noun:"device",  pool:null,      family:"phone",   stock:"order",   color:"#5A6472", prompt:"What kind of device is it, and what's going on with it?" }
 ];
 const BRAND_BY_ID = Object.fromEntries(DEVICE_BRANDS.map(b=>[b.id,b]));
 
@@ -637,58 +648,55 @@ const DEVICE_FAMILY = {
   console: { device:"Console", labor:100, repairs:["HDMI / Display","Cleaning / Maintenance","Other / Not Sure"] }
 };
 
-function turnLine(brand){
-  if(brand.family==="tablet")  return "Most iPads are worked out of a queue, so turnaround is usually around 2 to 3 days.";
-  if(brand.family==="console") return "Consoles are worked out of a queue, so turnaround is usually around 2 to 3 days.";
-  return brand.stock==="stocked"
+function turnLine(b){
+  if(b.family==="tablet")  return "Most iPads are worked out of a queue, so turnaround is usually around 2 to 3 days.";
+  if(b.family==="console") return "Consoles are worked out of a queue, so turnaround is usually around 2 to 3 days.";
+  return b.stock==="stocked"
     ? "If we have the part in stock, the repair usually takes about 30 to 45 minutes."
     : "Depending on the model we may have the part in stock or need to order it; once it's in, most repairs take about 30 to 45 minutes.";
 }
-function turnMeta(brand){
-  if(brand.family==="tablet"||brand.family==="console") return "Usually 2-3 days (queue)";
-  return brand.stock==="stocked" ? "~30-45 min if in stock" : "~30-45 min once part is in";
+function turnMeta(b){
+  if(b.family==="tablet"||b.family==="console") return "Usually 2-3 days (queue)";
+  return b.stock==="stocked" ? "~30-45 min if in stock" : "~30-45 min once part is in";
 }
 
-// repair type -> { category, coverage, sayAfter | say, noCost, categories }
-function repairSpec(brand, rt){
-  const noun=brand.noun, turn=turnLine(brand);
-  const screen=`For that ${noun} screen repair, the price would be {price} plus tax.\n\n${turn}\n\nThat screen repair comes with a lifetime warranty against part-defect issues, and it also includes one free screen re-repair within 12 months \u2014 so if the screen breaks again during that first year, you don't pay for another screen repair.`;
-  const battery=`For that ${noun} battery replacement, the price would be {price} plus tax.\n\n${turn}\n\nBattery repairs come with a 1-year warranty against part-defect issues.`;
-  const hardware=(label)=>`For that ${noun} ${label} repair, the price would be {price} plus tax.\n\n${turn}\n\nThat repair comes with a lifetime warranty against part-defect issues \u2014 that covers the replacement part itself, not new physical damage, liquid damage, or misuse.`;
-  switch(rt){
-    case "Screen": return { category:"Screen", coverage:COV.screen, sayAfter:screen };
-    case "Battery": return { category:"Battery", coverage:COV.battery, sayAfter:battery };
-    case "Charging Port": return { category:"Charging Port", coverage:COV.lifetime, sayAfter:hardware("charging port") };
-    case "Back Glass / Housing": return { category:"Back Glass / Housing", coverage:COV.lifetime, sayAfter:hardware("back glass") };
-    case "HDMI / Display": return { category:"HDMI / Display", coverage:COV.consoleHw,
-      sayAfter:`For that HDMI repair, the price would be {price} plus tax.\n\n${turn}\n\nIf we replace the HDMI port, that repair comes with a 1-year warranty against part-defect issues \u2014 that doesn't cover physical damage, liquid damage, or misuse.` };
-    case "Cleaning / Maintenance": return { category:"Cleaning / Overheating", coverage:COV.cleaning, noCost:true,
-      sayAfter:`For that cleaning and maintenance service, the price would be {price} plus tax.\n\n${turn}\n\nSince we're only cleaning and servicing the console \u2014 not installing a part \u2014 there's no replacement-part warranty. If we find something needs replacing, we'll explain the option and warranty before moving forward.` };
-    default: { // Other / Not Sure
-      const cats = brand.family==="console" ? ["Other"] : ["Charging Port","Back Glass / Housing","Other Small Parts"];
-      return { categories:cats, coverage:coverageFor(DEVICE_FAMILY[brand.family].device,cats[0]),
-        say:"We can help with that. Let me pull up the exact repair and part availability so I can give you the right price and turnaround instead of guessing." };
-    }
-  }
+function sayAfterFor(cls,noun,turn,label,warranty){
+  if(cls==="screen")   return `For that ${noun} screen repair, the price is {price} plus tax.\n\n${turn}\n\nThat screen repair comes with a lifetime warranty against part-defect issues, and it also includes one free screen re-repair within 12 months \u2014 so if the screen breaks again during that first year, you don't pay for another screen repair.`;
+  if(cls==="battery")  return `For that ${noun} battery replacement, the price is {price} plus tax.\n\n${turn}\n\nBattery repairs come with a 1-year warranty against part-defect issues.`;
+  if(cls==="charging") return `For that ${noun} charging port repair, the price is {price} plus tax.\n\n${turn}\n\nThat repair comes with a lifetime warranty against part-defect issues \u2014 that covers the replacement part itself, not new physical damage, liquid damage, or misuse.`;
+  if(cls==="backglass")return `For that ${noun} back glass repair, the price is {price} plus tax.\n\n${turn}\n\nThat repair comes with a lifetime warranty against part-defect issues \u2014 that covers the replacement part itself, not new physical damage, liquid damage, or misuse.`;
+  if(cls==="hdmi")     return `For that HDMI repair, the price is {price} plus tax.\n\n${turn}\n\nIf we replace the HDMI port, that repair comes with a 1-year warranty against part-defect issues \u2014 that doesn't cover physical damage, liquid damage, or misuse.`;
+  if(cls==="cleaning") return `For that full cleaning and maintenance service, the price is {price} plus tax.\n\n${turn}\n\nSince we're only cleaning and servicing \u2014 not installing a part \u2014 there's no replacement-part warranty. If we find something needs replacing, we'll explain the option and warranty before moving forward.`;
+  const w=String(warranty||"").toLowerCase();
+  const art=/lifetime/.test(w)?"a lifetime":/1[\s-]?year/.test(w)?"a 1-year":"a part-defect";
+  return `For that ${String(label).toLowerCase()} on your ${noun}, the price is {price} plus tax.\n\n${turn}\n\nThat repair comes with ${art} warranty against part-defect issues.`;
+}
+function coverageTextFor(cls,warranty){
+  if(cls==="screen")   return COV.screen;
+  if(cls==="battery")  return COV.battery;
+  if(cls==="charging"||cls==="backglass") return COV.lifetime;
+  if(cls==="hdmi")     return COV.consoleHw;
+  if(cls==="cleaning") return COV.cleaning;
+  return warranty||COV.lifetime;
+}
+function calcCategoryFor(cls){
+  return {screen:"Screen",battery:"Battery",charging:"Charging Port",backglass:"Back Glass / Housing",hdmi:"HDMI / Display",cleaning:"Cleaning / Overheating"}[cls]||"Other Small Parts";
 }
 
-/* ---- device navigation ---- */
+/* ---- navigation ---- */
 let drStack=[];
 function startDevice(){ state={mode:"device",actions:new Set()}; drStack=[]; renderDevice({stage:"brand"}); }
 function drGo(next){ drStack.push(state.dr); renderDevice(next); }
 function drBack(){ if(drStack.length){ renderDevice(drStack.pop()); } else goHome(); }
-
-function drChrome(accent, crumb, total, idx){
+function drChrome(accent,crumb,total,idx){
   return `<div class="flowbar"><button class="back" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button>`
     + `<span class="flowtag"><span class="dot" style="background:${accent}"></span>${esc(crumb)}</span>`
-    + (total?`<span class="steptrack">Step ${idx} / ${total}</span>`:'')
-    + `</div>`;
+    + (total?`<span class="steptrack">Step ${idx} / ${total}</span>`:'') + `</div>`;
 }
-
 function renderDevice(dr){
   state.dr=dr;
-  if(dr.stage==="brand") return renderBrand();
-  if(dr.stage==="model") return renderModel();
+  if(dr.stage==="brand")  return renderBrand();
+  if(dr.stage==="model")  return renderModel();
   if(dr.stage==="repair") return renderRepair();
   if(dr.stage==="result") return renderResult();
 }
@@ -696,95 +704,108 @@ function renderDevice(dr){
 function renderBrand(){
   const rows=DEVICE_BRANDS.map(b=>`<button class="choice" data-b="${b.id}"><span class="lab">${esc(b.label)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
   stage.innerHTML=drChrome(DEVICE_META.color,"Phone, iPad & Console",4,1)
-    + `<div class="panel" style="--flow:${DEVICE_META.color}"><div class="panel-body">
-        <h2 class="step-title">What are we working on?</h2>
-        <p class="step-sub">Pick the brand or device family.</p>
-        <div class="choices">${rows}</div>
-      </div></div>`;
+    + `<div class="panel" style="--flow:${DEVICE_META.color}"><div class="panel-body"><h2 class="step-title">What are we working on?</h2><p class="step-sub">Pick the brand or device family.</p><div class="choices">${rows}</div></div></div>`;
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-b]').forEach(btn=>btn.onclick=()=>{
     const b=BRAND_BY_ID[btn.dataset.b];
     if(b.pool) drGo({stage:"model",brandId:b.id});
-    else drGo({stage:"repair",brandId:b.id,model:null});   // Other -> skip model list
+    else drGo({stage:"repair",brandId:b.id,model:null});
   });
 }
 
 function renderModel(){
   const b=BRAND_BY_ID[state.dr.brandId];
-  const list=modelsFor(b.pool);
-  let body;
-  if(PRICING.ok && list.length){
-    const rows=list.map(m=>`<button class="choice" data-m="${esc(m.name)}"><span class="lab">${esc(m.name)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
-    body=`<div class="choices">${rows}
-      <button class="choice" data-m=""><span class="lab">Other / not listed</span><small>Enter the part cost by hand</small><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button></div>`;
+  const list=modelsForPool(b.pool);
+  const contBtn=`<button class="choice" data-m=""><span class="lab">Continue \u2014 price it by hand</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
+  let body, feedNote='';
+  if(PRICING.loading){
+    body=noteBlock("Loading current prices from the wiki\u2026")+`<div class="choices">${contBtn}</div>`;
+  } else if(list.length){
+    feedNote=`<div class="feed-line">${PRICING.updated?`Prices live from the wiki \u00B7 ${esc(PRICING.updated)}`:'Prices live from the wiki'}</div>`;
+    const rows=list.map(m=>`<button class="choice" data-m="${esc(m)}"><span class="lab">${esc(m)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
+    body=`<div class="choices">${rows}<button class="choice" data-m=""><span class="lab">Other / not listed</span><small>Price it by hand</small><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button></div>`;
   } else {
-    body=noteBlock(PRICING.ok?"No models in the feed yet for this brand \u2014 continue and enter the part cost by hand.":"Pricing feed unavailable \u2014 continue and enter the part cost by hand.","warn")
-      + `<div class="choices"><button class="choice" data-m=""><span class="lab">Continue</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button></div>`;
+    body=noteBlock(PRICING.ok?"No models listed for this brand yet \u2014 continue and price it by hand.":"Pricing feed unavailable \u2014 continue and price it by hand.","warn")+`<div class="choices">${contBtn}</div>`;
   }
   stage.innerHTML=drChrome(b.color,b.label,4,2)
-    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body">
-        <h2 class="step-title">${esc(b.label)} \u2014 which device?</h2>
-        ${sayBlock(b.prompt)}
-        ${body}
-      </div></div>`;
+    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body"><h2 class="step-title">${esc(b.label)} \u2014 which device?</h2>${sayBlock(b.prompt)}${feedNote}${body}</div></div>`;
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-m]').forEach(btn=>btn.onclick=()=>drGo({stage:"repair",brandId:b.id,model:btn.dataset.m||null}));
 }
 
 function renderRepair(){
-  const b=BRAND_BY_ID[state.dr.brandId];
-  const fam=DEVICE_FAMILY[b.family];
-  const rows=fam.repairs.map(rt=>`<button class="choice" data-rt="${esc(rt)}"><span class="lab">${esc(rt)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
-  const who=state.dr.model?esc(state.dr.model):esc(b.label);
-  stage.innerHTML=drChrome(b.color,`${b.label}${state.dr.model?' \u00B7 '+esc(state.dr.model):''}`,4,3)
-    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body">
-        <h2 class="step-title">${who} \u2014 what's the repair?</h2>
-        <div class="choices">${rows}</div>
-      </div></div>`;
+  const b=BRAND_BY_ID[state.dr.brandId], fam=DEVICE_FAMILY[b.family], model=state.dr.model;
+  const wikiRepairs = model ? modelRepairs(b.pool,model) : [];
+  let opts=[];
+  if(wikiRepairs.length){
+    opts = wikiRepairs.map(r=>({label:r,rt:r}));                 // exact wiki labels, priced
+    if(b.family==="console") opts.push({label:"Full Cleaning / Maintenance",sub:"Flat $100 \u00B7 excludes Switch",rt:"__cleaning"});
+    opts.push({label:"Other / Not Sure",sub:"Price it by hand",rt:"__other"});
+  } else {
+    opts = fam.repairs.map(r=> r==="Other / Not Sure" ? {label:r,sub:"Price it by hand",rt:"__other"} : {label:r,rt:r,manual:true});
+    if(b.family==="console") opts.splice(opts.length-1,0,{label:"Full Cleaning / Maintenance",sub:"Flat $100 \u00B7 excludes Switch",rt:"__cleaning"});
+  }
+  const rows=opts.map((o,i)=>`<button class="choice" data-i="${i}"><span class="lab">${esc(o.label)}${o.sub?`<small>${esc(o.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
+  const who=model?esc(model):esc(b.label);
+  stage.innerHTML=drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,3)
+    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body"><h2 class="step-title">${who} \u2014 what's the repair?</h2><div class="choices">${rows}</div></div></div>`;
   document.getElementById('drBack').onclick=drBack;
-  stage.querySelectorAll('[data-rt]').forEach(btn=>btn.onclick=()=>drGo({stage:"result",brandId:b.id,model:state.dr.model,repairType:btn.dataset.rt}));
+  stage.querySelectorAll('[data-i]').forEach(btn=>btn.onclick=()=>drGo({stage:"result",brandId:b.id,model:model,repairType:opts[+btn.dataset.i].rt}));
 }
 
 function renderResult(){
-  const b=BRAND_BY_ID[state.dr.brandId];
-  const fam=DEVICE_FAMILY[b.family];
-  const spec=repairSpec(b,state.dr.repairType);
-  const s={ device:fam.device, labor:fam.labor, noCost:spec.noCost,
-    category:spec.category, categories:spec.categories,
-    wikiPool:b.pool||'', fixedModel:state.dr.model||'',
-    coverage:spec.coverage, sayAfter:spec.sayAfter, say:spec.say };
+  const b=BRAND_BY_ID[state.dr.brandId], fam=DEVICE_FAMILY[b.family], model=state.dr.model, rt=state.dr.repairType;
+  const turn=turnLine(b), noun=b.noun;
 
-  const who = state.dr.model?esc(state.dr.model):esc(b.label);
-  const metaLine = `<div class="result-meta"><span>${esc(state.dr.repairType)}</span><span class="dotsep">\u00B7</span><span>${esc(turnMeta(b))}</span></div>`;
+  // Resolve a wiki price where we can.
+  let feed=null, cls, repairLabel;
+  if(rt==="__cleaning"){ feed={price:100,warranty:"Service only \u2014 no part warranty"}; cls="cleaning"; repairLabel="Full Cleaning / Maintenance"; }
+  else if(rt==="__other"){ cls="other"; repairLabel="Other / Not Sure"; }
+  else { repairLabel=rt; cls=classifyRepair(rt); if(model) feed=modelPrice(b.pool,model,rt); }
 
-  const calc = calcBlock(s);
-  const scriptHTML = spec.sayAfter ? sayBlock(spec.sayAfter,'Say after price lookup') : sayBlock(spec.say);
-  const covHTML = spec.categories
-    ? `<div class="cov"><span class="ck">Coverage</span><span class="c-cov">${esc(coverageFor(fam.device,spec.categories[0]))}</span></div>`
-    : `<div class="cov"><span class="ck">Coverage</span>${esc(spec.coverage)}</div>`;
+  const who=model?esc(model):esc(b.label);
+  const meta=`<div class="result-meta"><span>${esc(repairLabel)}</span><span class="dotsep">\u00B7</span><span>${esc(turnMeta(b))}</span></div>`;
 
-  stage.innerHTML=drChrome(b.color,`${b.label}${state.dr.model?' \u00B7 '+esc(state.dr.model):''}`,4,4)
-    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body">
-        <h2 class="step-title">${who}</h2>
-        ${metaLine}
-        <div class="result-wrap">${calc}${scriptHTML}${covHTML}</div>
-        ${closingBlock(false)}
-        ${checklistBlock(CHECKLIST)}
-      </div>
-      <div class="footer-nav"><button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button></div>
-      </div>`;
+  let inner;
+  if(feed){
+    // Wiki price shown straight through — no breakdown.
+    const say=sayBlock(sayAfterFor(cls,noun,turn,repairLabel,feed.warranty),"Say to caller");
+    inner=`<div class="result-wrap">
+      <div class="pricehero"><div class="ph-head">Price <span class="feed-tag okfeed">${PRICING.updated?`wiki \u00B7 ${esc(PRICING.updated)}`:'from wiki'}</span></div>
+        <div class="ph-amt">${money(feed.price)}<span class="ph-plus">+ tax</span></div>
+        ${feed.warranty?`<div class="ph-warr">${esc(feed.warranty)}</div>`:''}</div>
+      ${say}
+      <div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,feed.warranty))}</div>
+    </div>`;
+  } else {
+    // Manual fallback — markup calculator.
+    let s;
+    if(rt==="__other"){
+      const cats=b.family==="console"?["Other"]:["Charging Port","Back Glass / Housing","Other Small Parts"];
+      s={device:fam.device,labor:fam.labor,categories:cats,hint:"not in wiki"};
+      const say=sayBlock("We can help with that \u2014 let me pull up the exact repair and part availability so I can give you the right price and turnaround instead of guessing.");
+      inner=`<div class="result-wrap">${calcBlock(s)}${say}<div class="cov"><span class="ck">Coverage</span><span class="c-cov">${esc(coverageFor(fam.device,cats[0]))}</span></div></div>`;
+    } else {
+      const cat=calcCategoryFor(cls);
+      s={device:fam.device,labor:fam.labor,category:cat,noCost:cls==="cleaning",hint:"not in wiki"};
+      const say=sayBlock(sayAfterFor(cls,noun,turn,repairLabel,""),"Say after price lookup");
+      inner=`<div class="result-wrap">${calcBlock(s)}${say}<div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,""))}</div></div>`;
+    }
+  }
+
+  stage.innerHTML=drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,4)
+    + `<div class="panel" style="--flow:${b.color}"><div class="panel-body"><h2 class="step-title">${who}</h2>${meta}${inner}${closingBlock(false)}${checklistBlock(CHECKLIST)}</div>
+       <div class="footer-nav"><button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button></div></div>`;
 
   stage.querySelectorAll('#drBack').forEach(x=>x.onclick=drBack);
   document.getElementById('drFinish').onclick=goHome;
   stage.querySelectorAll('.calc').forEach(setupCalc);
-  wireClosing();
-  wireChecklist();
+  if(feed){ const sp=stage.querySelector('.say-price'); if(sp) sp.textContent=money(feed.price); }
+  wireClosing(); wireChecklist();
 }
 
-/* shared wiring reused by device result */
 function wireClosing(){
-  const closing=stage.querySelector('.closing');
-  if(!closing) return;
+  const closing=stage.querySelector('.closing'); if(!closing) return;
   closing.querySelectorAll('[data-r]').forEach(bn=>bn.onclick=()=>{
     closing.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x===bn));
     closing.querySelectorAll('[data-rev]').forEach(r=>r.classList.toggle('show',r.dataset.rev===bn.dataset.r));
@@ -919,84 +940,21 @@ function wireStep(step){
 }
 
 function setupCalc(el){
-  const device=el.dataset.device, fixed=el.dataset.category, pool=el.dataset.pool;
-  const wikiPool=el.dataset.wikipool, fixedModel=el.dataset.model;
+  const device=el.dataset.device, fixed=el.dataset.category;
   const cost=el.querySelector('.c-cost'), labor=el.querySelector('.c-labor'), catSel=el.querySelector('.c-cat');
-  const modelSel=el.querySelector('.c-model'), feedTag=el.querySelector('[data-feed]');
   const cust=el.querySelector('.c-cust'), mraWrap=el.querySelector('.c-mra-wrap'), mra=el.querySelector('.c-mra');
   const body=el.closest('.acc-body')||el.closest('.result-wrap')||el.parentElement;
-  const sayPrice=body.querySelector('.say-price'), cov=body.querySelector('.c-cov');
-  let fixedPrice=null;   // set when the wiki lists a flat price instead of a part cost
-
+  const sayPrice=body?body.querySelector('.say-price'):null, cov=body?body.querySelector('.c-cov'):null;
   function currentCat(){ return catSel?catSel.value:fixed; }
-
-  // Fixed-model prefill: pull the part cost from the wiki for the chosen model + category.
-  function prefillFixed(){
-    if(!wikiPool||!fixedModel||!cost) return;
-    const hit=modelCost(wikiPool,fixedModel,currentCat());
-    if(hit&&hit.price!=null){ fixedPrice=Number(hit.price); cost.value=''; cost.readOnly=true; cost.placeholder='set in wiki'; }
-    else if(hit){ fixedPrice=null; cost.value=hit.cost; cost.readOnly=false; cost.placeholder='0.00'; }
-    else { fixedPrice=null; cost.readOnly=false; cost.value=''; cost.placeholder='not in wiki - enter cost'; }
-  }
-  function markFeedFixed(){
-    if(!feedTag||modelSel) return;
-    if(!wikiPool){ feedTag.textContent=''; return; }
-    feedTag.textContent = PRICING.ok ? (PRICING.updated?`· wiki ${PRICING.updated}`:'· live from wiki') : '· manual (feed unavailable)';
-    feedTag.className = 'feed-tag '+(PRICING.ok?'okfeed':'warnfeed');
-  }
-
-  function fillModels(){
-    if(!modelSel) return;
-    const list=modelsFor(pool);
-    if(!PRICING.ok||!list.length){
-      modelSel.innerHTML=`<option value="">Not listed — enter cost</option>`;
-      modelSel.disabled=true;
-      if(feedTag){ feedTag.textContent = PRICING.ok?'· no models in feed':'· manual (feed unavailable)'; feedTag.className='feed-tag warnfeed'; }
-      return;
-    }
-    modelSel.disabled=false;
-    const groups={};
-    list.forEach(m=>{ (groups[m.pool]=groups[m.pool]||[]).push(m); });
-    let html=`<option value="">Other / not listed…</option>`;
-    Object.entries(groups).forEach(([g,ms])=>{
-      const opts=ms.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
-      html += (pool==='AnyPhone') ? `<optgroup label="${esc(g)}">${opts}</optgroup>` : opts;
-    });
-    modelSel.innerHTML=html;
-    if(feedTag){ feedTag.textContent = PRICING.updated?`· wiki ${PRICING.updated}`:'· live from wiki'; feedTag.className='feed-tag okfeed'; }
-  }
-
-  function applyModel(){
-    fixedPrice=null;
-    if(!modelSel||!modelSel.value){ if(cost) cost.readOnly=false; return; }
-    const hit=modelCost(pool,modelSel.value,currentCat());
-    if(!hit){
-      if(cost){ cost.value=''; cost.readOnly=false; cost.placeholder='not in wiki — enter cost'; }
-      return;
-    }
-    if(hit.price!=null){ fixedPrice=Number(hit.price); if(cost){cost.value='';cost.readOnly=true;} }
-    else if(cost){ cost.value=hit.cost; cost.readOnly=false; cost.placeholder='0.00'; }
-  }
-
   function run(){
     const cat=currentCat();
     if(cov&&catSel) cov.textContent=coverageFor(device,cat);
-    if(fixedPrice!=null){
-      cust.textContent=money(fixedPrice);
-      if(sayPrice) sayPrice.textContent=money(fixedPrice);
-      if(mraWrap) mraWrap.style.display='none';
-      return;
-    }
     const r=priceCalc(device,cat,cost?cost.value:'',labor.value);
     if(!r){ cust.textContent='$—'; if(sayPrice)sayPrice.textContent='$xxx.xx'; if(mraWrap)mraWrap.style.display='none'; return; }
     cust.textContent=money(r.customer);
     if(sayPrice) sayPrice.textContent=money(r.customer);
     if(mraWrap){ if(r.mra!=null){ mraWrap.style.display=''; mra.textContent=money(r.mra);} else mraWrap.style.display='none'; }
   }
-
-  if(modelSel){ fillModels(); modelSel.addEventListener('change',()=>{applyModel();run();}); }
-  if(catSel && modelSel) catSel.addEventListener('change',()=>{applyModel();run();});
-  if(!modelSel && wikiPool){ markFeedFixed(); prefillFixed(); if(catSel) catSel.addEventListener('change',()=>{prefillFixed();run();}); }
   [cost,labor,catSel].forEach(i=>{ if(i){ i.addEventListener('input',run); i.addEventListener('change',run);} });
   run();
 }
@@ -1012,7 +970,7 @@ function goNext(id){
 document.getElementById('homeBtn').onclick=goHome;
 document.getElementById('infoBtn').onclick=renderInfo;
 goHome();
-loadPricing().then(()=>{ if(state) renderStep(); });
+loadPricing().then(()=>{ if(state){ if(state.mode==="device"&&state.dr) renderDevice(state.dr); else renderStep(); } });
 </script>
 </body>
 </html>
