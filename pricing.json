@@ -1,0 +1,27 @@
+{
+  "updated": "2026-07-09",
+  "note": "Generated from RepairShopr wiki by n8n. Do not edit by hand.",
+  "models": [
+    { "pool": "iPhone", "name": "iPhone 11",        "costs": { "Screen": 28,  "Battery": 12, "Charging Port": 9 } },
+    { "pool": "iPhone", "name": "iPhone 12",        "costs": { "Screen": 42,  "Battery": 14, "Charging Port": 10 } },
+    { "pool": "iPhone", "name": "iPhone 13",        "costs": { "Screen": 60,  "Battery": 18, "Charging Port": 12, "Back Glass / Housing": 45 } },
+    { "pool": "iPhone", "name": "iPhone 14 Pro",    "costs": { "Screen": 118, "Battery": 22, "Charging Port": 14 } },
+    { "pool": "iPhone", "name": "iPhone 15 Pro Max","costs": { "Screen": 190, "Battery": 26 } },
+
+    { "pool": "Samsung", "name": "Galaxy S22",       "costs": { "Screen": 105, "Battery": 20 } },
+    { "pool": "Samsung", "name": "Galaxy S23 Ultra", "costs": { "Screen": 205, "Battery": 24 } },
+    { "pool": "Samsung", "name": "Galaxy A15",       "costs": { "Screen": 38,  "Battery": 13 } },
+
+    { "pool": "Pixel", "name": "Pixel 7",   "costs": { "Screen": 78, "Battery": 19 } },
+    { "pool": "Pixel", "name": "Pixel 8 Pro","costs": { "Screen": 140, "Battery": 23 } },
+
+    { "pool": "iPad", "name": "iPad 9th Gen",     "costs": { "Screen": 32, "Battery": 26 } },
+    { "pool": "iPad", "name": "iPad Air 5",       "costs": { "Screen": 145, "Battery": 30 } },
+    { "pool": "iPad", "name": "iPad Pro 11 (M2)", "costs": { "Screen": 210, "Battery": 38 } },
+
+    { "pool": "Console", "name": "PlayStation 5",     "costs": { "HDMI / Display": 40, "Other": 55 } },
+    { "pool": "Console", "name": "Xbox Series X",     "costs": { "HDMI / Display": 38, "Other": 50 } },
+    { "pool": "Console", "name": "Nintendo Switch",   "costs": { "HDMI / Display": 30, "Other": 42 } },
+    { "pool": "Console", "name": "Nintendo Switch OLED", "costs": { "HDMI / Display": 34, "Other": 48 } }
+  ]
+}
