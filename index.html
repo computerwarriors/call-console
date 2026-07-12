@@ -779,7 +779,7 @@ function renderModel(){
   if(PRICING.loading){
     right=noteBlock("Loading current prices from the wiki\u2026")+`<div class="choices">${contBtn}</div>`;
   } else if(list.length){
-    feedNote=`<div class="feed-line">${PRICING.updated?`Prices live from the wiki \u00B7 ${esc(PRICING.updated)}`:'Prices live from the wiki'}</div>`;
+    feedNote='';
     if(list.length>6) search=`<div class="model-search"><span class="ms-ic">${ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')}</span><input type="text" id="modelSearch" placeholder="Search ${esc(b.label)} models\u2026" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`;
     const rows=list.map(m=>`<button class="choice" data-m="${esc(m)}" data-name="${esc(m.toLowerCase())}"><span class="lab">${esc(m)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
     const other=`<button class="choice model-other" data-m="" data-name=""><span class="lab">Other / not listed<small>Price it by hand</small></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
@@ -843,7 +843,7 @@ function renderResult(){
   // LEFT = price + what to say + coverage
   let left='';
   if(feed){
-    left=`<div class="pricehero"><div class="ph-head">Price <span class="feed-tag okfeed">${PRICING.updated?`wiki \u00B7 ${esc(PRICING.updated)}`:'from wiki'}</span></div>`
+    left=`<div class="pricehero"><div class="ph-head">Price</div>`
       + `<div class="ph-amt">${money(feed.price)}<span class="ph-plus">+ tax</span></div>`
       + (feed.warranty?`<div class="ph-warr">${esc(feed.warranty)}</div>`:'') + `</div>`
       + sayBlock(sayAfterFor(cls,noun,turn,repairLabel,feed.warranty),"Say to caller")
