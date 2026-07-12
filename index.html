@@ -843,10 +843,7 @@ function renderResult(){
   // LEFT = price + what to say + coverage
   let left='';
   if(feed){
-    left=`<div class="pricehero">`
-      + `<div class="ph-amt">${money(feed.price)}<span class="ph-plus">+ tax</span></div>`
-      + (feed.warranty?`<div class="ph-warr">${esc(feed.warranty)}</div>`:'') + `</div>`
-      + sayBlock(sayAfterFor(cls,noun,turn,repairLabel,feed.warranty),"Say to caller")
+    left=sayBlock(sayAfterFor(cls,noun,turn,repairLabel,feed.warranty),"Say to caller")
       + `<div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,feed.warranty))}</div>`;
   } else if(rt==="__other"){
     const cats=b.family==="console"?["Other"]:["Charging Port","Back Glass / Housing","Other Small Parts"];
