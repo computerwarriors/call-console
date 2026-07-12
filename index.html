@@ -843,7 +843,7 @@ function renderResult(){
   // LEFT = price + what to say + coverage
   let left='';
   if(feed){
-    left=`<div class="pricehero"><div class="ph-head">Price</div>`
+    left=`<div class="pricehero">`
       + `<div class="ph-amt">${money(feed.price)}<span class="ph-plus">+ tax</span></div>`
       + (feed.warranty?`<div class="ph-warr">${esc(feed.warranty)}</div>`:'') + `</div>`
       + sayBlock(sayAfterFor(cls,noun,turn,repairLabel,feed.warranty),"Say to caller")
