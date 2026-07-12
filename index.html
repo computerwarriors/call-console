@@ -670,7 +670,7 @@ function closingBlock(objectionsOnly){
 }
 
 function checklistBlock(items){
-  return `<div class="checklist-lbl">Before you hang up</div><div class="actions-list">`+items.map(a=>`<button class="act" data-act="${esc(a)}"><span class="box">${ic('<path d="M20 6 9 17l-5-5"/>')}</span><span class="lbl-txt">${esc(a)}</span></button>`).join('')+`</div>`;
+  return '';   // end-of-call checklist removed per request
 }
 function choicesBlock(choices){
   return `<div class="choices">`+choices.map((ch,i)=>`<button class="choice" data-choice="${i}"><span class="lab">${esc(ch.label)}${ch.sub?`<small>${esc(ch.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('')+`</div>`;
