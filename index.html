@@ -815,8 +815,7 @@ function renderRepair(){
   }
   const rows=opts.map((o,i)=>`<button class="choice" data-i="${i}"><span class="lab">${esc(o.label)}${o.sub?`<small>${esc(o.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
   const who=model?esc(model):esc(b.label);
-  const left=sayBlock("And what seems to be going on with it?");
-  stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,3),accent:b.color,title:`${who} \u2014 what's the repair?`,left,right:`<div class="choices">${rows}</div>`});
+  stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,3),accent:b.color,title:`${who} \u2014 what's the repair?`,right:`<div class="choices">${rows}</div>`});
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-i]').forEach(btn=>btn.onclick=()=>drGo({stage:"result",brandId:b.id,model:model,repairType:opts[+btn.dataset.i].rt}));
 }
