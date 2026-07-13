@@ -899,9 +899,8 @@ function renderRepair(){
   if(wikiRepairs.length){
     opts = wikiRepairs.map(r=>({label:r,rt:r}));
     if(b.family==="console") opts.push({label:"Full Cleaning / Maintenance",sub:"Flat $100 \u00B7 excludes Switch",rt:"__cleaning"});
-    opts.push({label:"Other / Not Sure",sub:"Price it by hand",rt:"__other"});
   } else {
-    opts = fam.repairs.map(r=> r==="Other / Not Sure" ? {label:r,sub:"Price it by hand",rt:"__other"} : {label:r,rt:r,manual:true});
+    opts = fam.repairs.filter(r=> r!=="Other / Not Sure").map(r=> ({label:r,rt:r,manual:true}));
     if(b.family==="console") opts.splice(opts.length-1,0,{label:"Full Cleaning / Maintenance",sub:"Flat $100 \u00B7 excludes Switch",rt:"__cleaning"});
   }
   const rows=opts.map((o,i)=>`<button class="choice" data-i="${i}"><span class="lab">${esc(o.label)}${o.sub?`<small>${esc(o.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
