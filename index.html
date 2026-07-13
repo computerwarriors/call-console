@@ -653,7 +653,6 @@ function closingBlock(objectionsOnly){
     </div>`;
   }
   return `<div class="closing"><div class="closing-h">Close the call</div>
-    ${sayBlock("Are you able to bring it in today?")}
     <div class="obj-btns"><button class="obj-b" data-r="yes">They can come in</button><button class="obj-b" data-r="no">Not today</button></div>
     <div class="reveal" data-rev="yes">${sayBlock("Perfect! Before you head over \u2014 do you know where we're located?")}${noteBlock("If they're not sure, tap Info at the top and read them the nearest location.")}${sayBlock("Okay, great \u2014 we look forward to seeing you in the shop!","Then say")}</div>
     <div class="reveal" data-rev="no">
@@ -707,9 +706,48 @@ function turnLine(b){
     ? "If we have the part in stock, the repair usually takes about 30 to 45 minutes."
     : "Depending on the model we may have the part in stock or need to order it; once it's in, most repairs take about 30 to 45 minutes.";
 }
-function turnMeta(b){
-  if(b.family==="tablet"||b.family==="console") return "Usually 2-3 days (queue)";
-  return b.stock==="stocked" ? "~30-45 min if in stock" : "~30-45 min once part is in";
+function turnMeta(b, model, cls){
+  const t=deviceTier(b, model, cls);
+  if(t==="1") return "Same day \u00b7 ~30-45 min in stock";
+  if(t==="2") return "Next day \u00b7 $50 deposit to order";
+  return "2-3 day queue";
+}
+
+function partWord(cls){ return cls==="screen"?"screen":cls==="battery"?"battery":"part"; }
+
+function deviceTier(b, model, cls){
+  if(b.family==="console") return "3b";
+  if(b.family==="tablet")  return "3a";
+  if(b.id==="apple") return "1";
+  if(b.id==="samsung" && cls==="screen" && /ultra/i.test(String(model||""))) return "1";
+  return "2";
+}
+
+function benefitLine(cls, noun){
+  if(cls==="screen")    return `That ${noun} screen repair comes with a lifetime warranty against part defects, plus one free screen replacement within the first 12 months \u2014 so if it breaks again during that first year, you're not paying for another screen.`;
+  if(cls==="battery")   return `That battery replacement comes with a one-year warranty against part defects.`;
+  if(cls==="charging")  return `That charging port repair comes with a lifetime warranty against part defects.`;
+  if(cls==="backglass") return `That back glass repair comes with a lifetime warranty against part defects.`;
+  if(cls==="hdmi")      return `That HDMI repair comes with a one-year warranty against part defects.`;
+  if(cls==="cleaning")  return `Since we're only cleaning and servicing \u2014 not installing a part \u2014 there's no replacement-part warranty.`;
+  return `That repair comes with a lifetime warranty against part defects.`;
+}
+
+function tierScript(tier, cls, noun){
+  let benefit;
+  if(tier==="3b"){
+    benefit = cls==="cleaning" ? benefitLine("cleaning",noun)
+            : cls==="screen"   ? benefitLine("screen","console")
+            : `That console repair comes with a lifetime warranty against part defects.`;
+  } else {
+    benefit = benefitLine(cls, noun);
+  }
+  let turn;
+  if(tier==="1")       turn = `If we've got the part in stock, we'll have it done in about 30 to 45 minutes.`;
+  else if(tier==="2")  turn = `Since it's a ${noun}, we'll check it in to confirm the exact model and order the ${partWord(cls)} \u2014 it comes in overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
+  else if(tier==="3a") turn = `iPads go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
+  else                 turn = `Consoles go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
+  return `${benefit} ${turn} It's {price} plus tax.\n\nAre you able to come in today?`;
 }
 
 function sayAfterFor(cls,noun,turn,label,warranty){
@@ -822,34 +860,32 @@ function renderRepair(){
 
 function renderResult(){
   const b=BRAND_BY_ID[state.dr.brandId], fam=DEVICE_FAMILY[b.family], model=state.dr.model, rt=state.dr.repairType;
-  const turn=turnLine(b), noun=b.noun;
+  const noun=b.noun;
 
   let feed=null, cls, repairLabel;
   if(rt==="__cleaning"){ feed={price:100,warranty:"Service only \u2014 no part warranty"}; cls="cleaning"; repairLabel="Full Cleaning / Maintenance"; }
   else if(rt==="__other"){ cls="other"; repairLabel="Other / Not Sure"; }
   else { repairLabel=rt; cls=classifyRepair(rt); if(model) feed=modelPrice(b.pool,model,rt); }
 
+  const tier=deviceTier(b, model, cls);
   const who=model?esc(model):esc(b.label);
-  const sub=`<div class="result-meta"><span>${esc(repairLabel)}</span><span class="dotsep">\u00B7</span><span>${esc(turnMeta(b))}</span></div>`;
+  const sub=`<div class="result-meta"><span>${esc(repairLabel)}</span><span class="dotsep">\u00B7</span><span>${esc(turnMeta(b,model,cls))}</span></div>`;
 
-  // LEFT = price + what to say + coverage
+  // LEFT = what to say (warranty + turnaround + price + ask, all in one script)
   let left='';
   if(feed){
-    left=sayBlock(sayAfterFor(cls,noun,turn,repairLabel,feed.warranty),"Say to caller")
-      + `<div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,feed.warranty))}</div>`;
+    left=sayBlock(tierScript(tier,cls,noun),"Say to caller");
   } else if(rt==="__other"){
     const cats=b.family==="console"?["Other"]:["Charging Port","Back Glass / Housing","Other Small Parts"];
     left=calcBlock({device:fam.device,labor:fam.labor,categories:cats,hint:"not in wiki"})
-      + sayBlock("We can help with that \u2014 let me pull up the exact repair and part availability so I can give you the right price and turnaround instead of guessing.")
-      + `<div class="cov"><span class="ck">Coverage</span><span class="c-cov">${esc(coverageFor(fam.device,cats[0]))}</span></div>`;
+      + sayBlock("We can help with that \u2014 let me pull up the exact repair and part availability so I can give you the right price and turnaround instead of guessing.");
   } else {
     const cat=calcCategoryFor(cls);
     left=calcBlock({device:fam.device,labor:fam.labor,category:cat,noCost:cls==="cleaning",hint:"not in wiki"})
-      + sayBlock(sayAfterFor(cls,noun,turn,repairLabel,""),"Say after price lookup")
-      + `<div class="cov"><span class="ck">Coverage</span>${esc(coverageTextFor(cls,""))}</div>`;
+      + sayBlock(tierScript(tier,cls,noun),"Say after price lookup");
   }
 
-  // RIGHT = close the call + checklist
+  // RIGHT = close the call
   const right=closingBlock(false)+checklistBlock(CHECKLIST);
 
   const footer=`<button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
