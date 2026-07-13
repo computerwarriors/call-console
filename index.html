@@ -639,6 +639,14 @@ function computerObjections(){
     <div class="mini-note">Computer priority service \u2014 <b>$100</b></div>
   </div>`;
 }
+
+function deviceObjections(){
+  return `<div class="closing"><div class="closing-h">Objections</div>
+    <p class="closing-sub">If they can't come in today, it's usually timing, price, or still shopping.</p>
+    ${sayBlock("No problem at all. Is it the timing, the price, or are you still comparing options?")}
+    ${objectionBlock()}
+  </div>`;
+}
 function closingBlock(objectionsOnly){
   if(objectionsOnly){
     return `<div class="closing"><div class="closing-h">Close the call</div>
@@ -885,11 +893,12 @@ function renderResult(){
       + sayBlock(tierScript(tier,cls,noun),"Say after price lookup");
   }
 
-  // RIGHT = close the call
-  const right=closingBlock(false)+checklistBlock(CHECKLIST);
+  // RIGHT = close the call cards; Objections full-width below — same layout as the computer flow
+  const right=computerCloseCards();
+  const full=deviceObjections();
 
   const footer=`<button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
-  stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,4),accent:b.color,title:who,sub,left,right,footer});
+  stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,4),accent:b.color,title:who,sub,left,right,full,footer});
 
   stage.querySelectorAll('#drBack').forEach(x=>x.onclick=drBack);
   document.getElementById('drFinish').onclick=goHome;
@@ -899,16 +908,15 @@ function renderResult(){
 }
 
 function wireClosing(){
-  const closing=stage.querySelector('.closing'); if(!closing) return;
-  closing.querySelectorAll('[data-r]').forEach(bn=>bn.onclick=()=>{
-    closing.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x===bn));
-    closing.querySelectorAll('[data-rev]').forEach(r=>r.classList.toggle('show',r.dataset.rev===bn.dataset.r));
+  stage.querySelectorAll('[data-r]').forEach(bn=>bn.onclick=()=>{
+    stage.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x===bn));
+    stage.querySelectorAll('[data-rev]').forEach(r=>r.classList.toggle('show',r.dataset.rev===bn.dataset.r));
   });
-  closing.querySelectorAll('[data-o]').forEach(bn=>bn.onclick=()=>{
+  stage.querySelectorAll('[data-o]').forEach(bn=>bn.onclick=()=>{
     const was=bn.classList.contains('on');
-    closing.querySelectorAll('[data-o]').forEach(x=>x.classList.remove('on'));
-    closing.querySelectorAll('[data-orev]').forEach(r=>r.classList.remove('show'));
-    if(!was){ bn.classList.add('on'); const t=closing.querySelector(`[data-orev="${bn.dataset.o}"]`); if(t) t.classList.add('show'); }
+    stage.querySelectorAll('[data-o]').forEach(x=>x.classList.remove('on'));
+    stage.querySelectorAll('[data-orev]').forEach(r=>r.classList.remove('show'));
+    if(!was){ bn.classList.add('on'); const t=stage.querySelector(`[data-orev="${bn.dataset.o}"]`); if(t) t.classList.add('show'); }
   });
 }
 function wireChecklist(){
