@@ -297,6 +297,10 @@
   .split{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:16px 30px 28px;align-items:start}
   .split.solo{grid-template-columns:1fr}
   .pane{min-width:0}
+  .pane{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .pane::-webkit-scrollbar{width:8px}
+  .pane::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+  .pane::-webkit-scrollbar-track{background:transparent}
   .pane-script{position:sticky;top:20px;align-self:start}
   .pane-choices{min-width:0}
   .pane-title{font-family:var(--disp);font-size:15px;font-weight:600;letter-spacing:.2px;margin:0 0 3px;color:var(--ink)}
@@ -505,6 +509,20 @@ const FLOWS = {
    ========================================================================= */
 const stage=document.getElementById('stage');
 let state=null; let history=[];
+
+/* ---- fit the two columns to the viewport; Objections sit below the fold ---- */
+function fitToViewport(){
+  stage.querySelectorAll('.pane').forEach(p=>{ p.style.maxHeight=''; p.style.overflowY=''; p.style.position=''; });
+  const split=stage.querySelector('.split');
+  if(!split || split.classList.contains('solo')) return;
+  if(!window.matchMedia('(min-width:880px)').matches) return;   // stacked on narrow screens
+  const top=split.getBoundingClientRect().top;
+  const avail=Math.floor(window.innerHeight - top - 20);
+  if(avail<300) return;                                          // too short to bother
+  split.querySelectorAll('.pane').forEach(p=>{ p.style.maxHeight=avail+'px'; p.style.overflowY='auto'; p.style.position='static'; });
+}
+let _fitRAF;
+function scheduleFit(){ cancelAnimationFrame(_fitRAF); _fitRAF=requestAnimationFrame(fitToViewport); }
 
 const ic=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1087,6 +1105,8 @@ function goNext(id){
   renderStep();
 }
 
+new MutationObserver(scheduleFit).observe(stage,{childList:true,subtree:true});
+window.addEventListener('resize',scheduleFit);
 document.getElementById('homeBtn').onclick=goHome;
 document.getElementById('infoBtn').onclick=renderInfo;
 goHome();
