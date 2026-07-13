@@ -610,7 +610,7 @@ function sectionBlock(s){
 }
 const SAY_TIMING = "We do offer priority service if you need the device looked at faster \u2014 it moves the device ahead in the queue for a quicker evaluation. Would that help your situation?";
 const SAY_PRICE = "I completely understand \u2014 no one really plans for a repair like this. We do have financing options available if that would make it easier. Would you like me to text you the application link?";
-const SAY_SHOPPING = "Totally makes sense \u2014 I'd do the same thing. We may not always be the cheapest option, but what sets us apart is the quality of the parts, the experience of our technicians, and the warranty that backs the repair.\n\nWe also take the time to inspect the device so you're not just fixing one thing and hoping nothing else is wrong.\n\nWould you like me to text you directions so you have them if you decide to stop by?";
+const SAY_SHOPPING = "Totally makes sense \u2014 I'd do the same thing. We may not always be the cheapest option, but what sets us apart is the quality of the parts, the experience of our technicians, and the warranty that backs the repair.\n\nWe also take the time to inspect the device so you're not just fixing one thing and hoping nothing else is wrong.";
 
 function objectionBlock(){
   return `<div class="obj-btns"><button class="obj-b" data-o="timing">Timing</button><button class="obj-b" data-o="price">Price</button><button class="obj-b" data-o="shopping">Shopping around</button></div>
@@ -969,7 +969,11 @@ function renderInfo(){
       <p class="step-sub">Walk-ins welcome. No appointment needed.</p>
       ${loc(SHOP.wilmington)}${loc(SHOP.jacksonville)}
     </div></div>`;
-  document.getElementById('backBtn').onclick=()=> state?renderStep():renderHome();
+  document.getElementById('backBtn').onclick=()=>{
+    if(!state) renderHome();
+    else if(state.mode==="device" && state.dr) renderDevice(state.dr);
+    else renderStep();
+  };
 }
 
 function startFlow(id){ state={flowId:id,idx:0,actions:new Set()}; history=[]; renderStep(); }
