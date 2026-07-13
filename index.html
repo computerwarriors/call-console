@@ -747,7 +747,7 @@ function tierScript(tier, cls, noun){
   else if(tier==="2")  turn = `Since it's a ${noun}, we'll check it in to confirm the exact model and order the ${partWord(cls)} \u2014 it comes in overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
   else if(tier==="3a") turn = `iPads go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
   else                 turn = `Consoles go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
-  return `${benefit} ${turn} It's {price} plus tax.\n\nAre you able to come in today?`;
+  return `${benefit} ${turn} It's only {price} plus tax.\n\nAre you able to come in today?`;
 }
 
 function sayAfterFor(cls,noun,turn,label,warranty){
