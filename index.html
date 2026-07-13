@@ -781,8 +781,7 @@ function renderModel(){
   } else {
     right=noteBlock(PRICING.ok?"No models listed for this brand yet \u2014 continue and price it by hand.":"Pricing feed unavailable \u2014 continue and price it by hand.","warn")+`<div class="choices">${contBtn}</div>`;
   }
-  const left=sayBlock(b.prompt);
-  stage.innerHTML=screen({flowbar:drChrome(b.color,b.label,4,2),accent:b.color,title:`${esc(b.label)} \u2014 which device?`,left,right});
+  stage.innerHTML=screen({flowbar:drChrome(b.color,b.label,4,2),accent:b.color,title:`${esc(b.label)} \u2014 which device?`,right});
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-m]').forEach(btn=>btn.onclick=()=>drGo({stage:"repair",brandId:b.id,model:btn.dataset.m||null}));
   const sb=document.getElementById('modelSearch');
