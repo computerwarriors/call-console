@@ -867,8 +867,7 @@ function renderModel(){
     feedNote='';
     if(list.length>6) search=`<div class="model-search"><span class="ms-ic">${ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')}</span><input type="text" id="modelSearch" placeholder="Search ${esc(b.label)} models\u2026" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`;
     const rows=list.map(m=>`<button class="choice" data-m="${esc(m)}" data-name="${esc(m.toLowerCase())}"><span class="lab">${esc(m)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
-    const other=`<button class="choice model-other" data-m="" data-name=""><span class="lab">Other / not listed<small>Price it by hand</small></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
-    right=`${feedNote}${search}<div class="choices scroll-list" id="modelList">${rows}<div class="no-match" id="noMatch" style="display:none">No match \u2014 use \u201COther / not listed\u201D below.</div>${other}</div>`;
+    right=`${feedNote}${search}<div class="choices scroll-list" id="modelList">${rows}<div class="no-match" id="noMatch" style="display:none">No match \u2014 check the spelling, or go back and choose \u201COther Device.\u201D</div></div>`;
   } else {
     right=noteBlock(PRICING.ok?"No models listed for this brand yet \u2014 continue and price it by hand.":"Pricing feed unavailable \u2014 continue and price it by hand.","warn")+`<div class="choices">${contBtn}</div>`;
   }
