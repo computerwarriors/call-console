@@ -307,6 +307,14 @@
   .pane-sub{color:var(--muted);font-size:13px;margin:0 0 14px}
   .split .scroll-list{max-height:56vh}
   .fullrow{padding:20px 30px 26px;border-top:1px dashed var(--line);margin-top:4px}
+  @media (min-width:880px) and (max-height:860px){
+    .work{padding-top:14px;padding-bottom:40px}
+    .flowbar{margin-bottom:8px}
+    .panel-head{padding:14px 30px 2px}
+    .step-title{font-size:21px;margin-bottom:2px}
+    .split{padding-top:8px;gap:18px}
+    .say{margin:2px 0 12px}
+  }
   .fullrow .closing{margin-top:0;padding-top:0;border-top:none}
   @media (max-width:880px){
     .split{grid-template-columns:1fr;gap:16px;padding:14px 18px 22px}
@@ -517,8 +525,7 @@ function fitToViewport(){
   if(!split || split.classList.contains('solo')) return;
   if(!window.matchMedia('(min-width:880px)').matches) return;   // stacked on narrow screens
   const top=split.getBoundingClientRect().top;
-  const avail=Math.floor(window.innerHeight - top - 20);
-  if(avail<300) return;                                          // too short to bother
+  const avail=Math.max(200, Math.floor(window.innerHeight - top - 16));
   split.querySelectorAll('.pane').forEach(p=>{ p.style.maxHeight=avail+'px'; p.style.overflowY='auto'; p.style.position='static'; });
 }
 let _fitRAF;
