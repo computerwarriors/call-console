@@ -309,6 +309,8 @@
   .pane-sub{color:var(--muted);font-size:13px;margin:0 0 14px}
   .split .scroll-list{max-height:56vh}
   .fullrow{padding:20px 30px 26px;border-top:1px dashed var(--line);margin-top:4px}
+  .odc-inputs{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 16px}
+  .odc-inputs .c-field{flex:1;min-width:130px}
   @media (min-width:880px) and (max-height:860px){
     .work{padding-top:14px;padding-bottom:40px}
     .flowbar{margin-bottom:8px}
@@ -783,7 +785,7 @@ function tierScript(tier, cls, noun){
   else if(tier==="2")  turn = cls==="battery"
                            ? `Since it's a ${noun}, we'll check it in to confirm the exact model and order the battery \u2014 we can't overnight batteries, so it's usually a couple of business days. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`
                            : `Since it's a ${noun}, we'll check it in to confirm the exact model and order the ${partWord(cls)} \u2014 it comes in overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
-  else if(tier==="3a") turn = `iPads go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
+  else if(tier==="3a") turn = `${noun==="iPad"?"iPads":noun.charAt(0).toUpperCase()+noun.slice(1)+"s"} go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
   else                 turn = `Consoles go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
   return `${benefit} ${turn} It's only {price} plus tax.\n\nAre you able to come in today?`;
 }
@@ -837,7 +839,7 @@ function renderBrand(){
   stage.querySelectorAll('[data-b]').forEach(btn=>btn.onclick=()=>{
     const b=BRAND_BY_ID[btn.dataset.b];
     if(b.pool) drGo({stage:"model",brandId:b.id});
-    else drGo({stage:"repair",brandId:b.id,model:null});
+    else drGo({stage:"result",brandId:b.id,model:null,repairType:"__other"});
   });
 }
 
@@ -914,9 +916,15 @@ function renderResult(){
   if(feed){
     left=sayBlock(tierScript(tier,cls,noun),"Say to caller");
   } else if(rt==="__other"){
-    const cats=b.family==="console"?["Other"]:["Charging Port","Back Glass / Housing","Other Small Parts"];
-    left=calcBlock({device:fam.device,labor:fam.labor,categories:cats,hint:"not in wiki"})
-      + sayBlock("We can help with that \u2014 let me pull up the exact repair and part availability so I can give you the right price and turnaround instead of guessing.");
+    const CATS=["Screen","Battery","Charging Port","Back Glass / Housing","Other Small Parts"];
+    const defDev = b.family==="tablet"?"Tablet":b.family==="console"?"Console":"Phone";
+    const devOpts=["Phone","Tablet","Console"].map(d=>`<option${d===defDev?" selected":""}>${d}</option>`).join("");
+    const catOpts=CATS.map(c=>`<option>${esc(c)}</option>`).join("");
+    left = `<div class="odc-inputs">`
+      + `<label class="c-field"><span class="cl">Device type</span><select class="od-device">${devOpts}</select></label>`
+      + `<label class="c-field"><span class="cl">Repair category</span><select class="od-cat">${catOpts}</select></label>`
+      + `<label class="c-field"><span class="cl">Part cost</span><input type="number" class="od-cost" placeholder="0.00" step="0.01" inputmode="decimal"></label>`
+      + `</div><div class="od-script"></div>`;
   } else {
     const cat=calcCategoryFor(cls);
     left=calcBlock({device:fam.device,labor:fam.labor,category:cat,noCost:cls==="cleaning",hint:"not in wiki"})
@@ -934,6 +942,23 @@ function renderResult(){
   document.getElementById('drFinish').onclick=goHome;
   stage.querySelectorAll('.calc').forEach(setupCalc);
   if(feed){ const sp=stage.querySelector('.say-price'); if(sp) sp.textContent=money(feed.price); }
+  if(rt==="__other"){
+    const dev=stage.querySelector('.od-device'), catx=stage.querySelector('.od-cat'), costx=stage.querySelector('.od-cost');
+    const scriptBox=stage.querySelector('.od-script'), metaBox=stage.querySelector('.result-meta');
+    const clsOf=c=>({Screen:"screen",Battery:"battery","Charging Port":"charging","Back Glass / Housing":"backglass"})[c]||"other";
+    const tierOf=d=>d==="Tablet"?"3a":d==="Console"?"3b":"2";
+    const metaOf=(d,cls)=>{ if(d==="Tablet"||d==="Console") return "2-3 day queue"; if(cls==="backglass"||cls==="charging") return "Next day \u00b7 $50 deposit to order"; return cls==="battery"?"A couple days \u00b7 $50 deposit to order":"Next day \u00b7 $50 deposit to order"; };
+    function odRun(){
+      const d=dev.value, c=catx.value, cls=clsOf(c);
+      scriptBox.innerHTML=sayBlock(tierScript(tierOf(d),cls,d.toLowerCase()),"Say to caller");
+      const r=priceCalc(d,c,costx.value===""?"":costx.value,LABOR[d]);
+      const sp=scriptBox.querySelector('.say-price'); if(sp) sp.textContent=r?money(r.customer):"$xxx.xx";
+      if(metaBox) metaBox.innerHTML=`<span>${esc(c)}</span><span class="dotsep">\u00B7</span><span>${esc(metaOf(d,cls))}</span>`;
+      fitToViewport();
+    }
+    [dev,catx,costx].forEach(x=>{ x.addEventListener("input",odRun); x.addEventListener("change",odRun); });
+    odRun();
+  }
   wireClosing(); wireChecklist();
 }
 
