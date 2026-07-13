@@ -755,9 +755,8 @@ function renderDevice(dr){
 
 function renderBrand(){
   const rows=DEVICE_BRANDS.map(b=>`<button class="choice" data-b="${b.id}"><span class="lab">${esc(b.label)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
-  const left=sayBlock("Sure, we can help with that \u2014 what kind of device is it?");
   const right=`<div class="choices">${rows}</div>`;
-  stage.innerHTML=screen({flowbar:drChrome(DEVICE_META.color,"Phone, iPad & Console",4,1),accent:DEVICE_META.color,title:"What are we working on?",sub:"Pick the brand or device family.",left,right});
+  stage.innerHTML=screen({flowbar:drChrome(DEVICE_META.color,"Phone, iPad & Console",4,1),accent:DEVICE_META.color,title:"What are we working on?",sub:"Pick the brand or device family.",right});
   document.getElementById('drBack').onclick=drBack;
   stage.querySelectorAll('[data-b]').forEach(btn=>btn.onclick=()=>{
     const b=BRAND_BY_ID[btn.dataset.b];
