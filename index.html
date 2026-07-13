@@ -715,8 +715,9 @@ function turnLine(b){
     : "Depending on the model we may have the part in stock or need to order it; once it's in, most repairs take about 30 to 45 minutes.";
 }
 function turnMeta(b, model, cls){
+  if(cls==="backglass") return "Next day \u00b7 $50 deposit to order";
   const t=deviceTier(b, model, cls);
-  if(t==="1") return "Same day \u00b7 ~30-45 min in stock";
+  if(t==="1") return cls==="charging" ? "Same day \u00b7 ~45 min-1 hr in stock" : "Same day \u00b7 ~30-45 min in stock";
   if(t==="2") return "Next day \u00b7 $50 deposit to order";
   return "2-3 day queue";
 }
@@ -751,7 +752,12 @@ function tierScript(tier, cls, noun){
     benefit = benefitLine(cls, noun);
   }
   let turn;
-  if(tier==="1")       turn = `If we've got the part in stock, we'll have it done in about 30 to 45 minutes.`;
+  if(cls==="backglass") turn = `Back glass isn't something we keep in stock, so we'll order it in \u2014 it ships overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
+  else if(tier==="1")  turn = cls==="screen"
+                           ? `We keep those screens in stock, so we'll have it done in about 30 to 45 minutes.`
+                           : cls==="charging"
+                           ? `If we've got the part in stock, we'll have it done in about 45 minutes to an hour.`
+                           : `If we've got the part in stock, we'll have it done in about 30 to 45 minutes.`;
   else if(tier==="2")  turn = `Since it's a ${noun}, we'll check it in to confirm the exact model and order the ${partWord(cls)} \u2014 it comes in overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
   else if(tier==="3a") turn = `iPads go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
   else                 turn = `Consoles go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
