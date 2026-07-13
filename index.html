@@ -969,7 +969,7 @@ function renderStep(){
 
 function wireStep(step){
   document.getElementById('backBtn').onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} else renderHome(); };
-  const prev=document.getElementById('prevBtn'); if(prev) prev.onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} };
+  const prev=document.getElementById('prevBtn'); if(prev) prev.onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} else renderHome(); };
   const next=document.getElementById('nextBtn'); if(next) next.onclick=()=>goNext(step.next);
   const finish=document.getElementById('finishBtn'); if(finish) finish.onclick=goHome;
 
