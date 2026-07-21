@@ -503,10 +503,13 @@ const FLOWS = {
       { id:"type", title:"What kind of support?",
         choices:[
           {label:"Immediate Need",sub:"Individual / Business \u2014 remote or onsite support",next:"retail"},
+          {label:"Project Request",sub:"A defined project \u2014 scoped and quoted",next:"project"},
           {label:"Managed IT Services",sub:"For a business looking for someone to manage their IT",next:"business"}
         ]},
       { id:"retail", title:"Immediate Retail Need", end:true, checklist:CHECKLIST_SUPPORT,
         embed:{ label:"Retail intake form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/1", height:950, allow:"payment" } },
+      { id:"project", title:"Project Request", end:true, checklist:CHECKLIST_SUPPORT,
+        embed:{ label:"Project request form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/8", height:804, allow:"payment" } },
       { id:"business", title:"Business IT Services", end:true, checklist:CHECKLIST_SUPPORT,
         say:"Great \u2014 we do offer managed IT support for businesses. So I can point you to the right team, roughly how many computers or workstations does the business run?",
         note:"15 or more workstations \u2192 CW IT Support. Under 15 \u2192 SOHO. Pick the tier below to load their form.",
