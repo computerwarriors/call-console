@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-07-20T10:00:03.509Z",
+  "_generated": "2026-07-27T10:00:03.188Z",
   "_warranty": {
     "screen": "Lifetime warranty on parts and labor, plus one free re-repair if the screen cracks again within 12 months.",
     "screenLine": "Premium-grade display, color-matched and touch-tested. Covered for life against defects — and if it cracks again within 12 months, we'll repair it once for free.",
@@ -1406,7 +1406,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 149.95,
+          "price": 159.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -1420,7 +1420,7 @@
       },
       "Pixel 9 Pro Fold": {
         "Screen Repair": {
-          "price": 1129.95,
+          "price": 1179.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
