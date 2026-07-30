@@ -6,7 +6,7 @@
 <title>Call Console — Computer Warriors</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#EDF0F4;
@@ -32,7 +32,7 @@
     --sh-1:0 1px 2px rgba(17,23,33,.05);
     --sh-2:0 1px 3px rgba(17,23,33,.06), 0 8px 24px -6px rgba(17,23,33,.10);
     --sh-3:0 2px 6px rgba(17,23,33,.07), 0 16px 40px -12px rgba(17,23,33,.18);
-    --disp:'Space Grotesk',system-ui,sans-serif;
+    --disp:'Plus Jakarta Sans',system-ui,sans-serif;
     --body:'Inter',system-ui,sans-serif;
     --mono:'JetBrains Mono',ui-monospace,monospace;
   }
@@ -295,11 +295,14 @@
   .appt-cta .hint{font-size:12px;color:var(--faint)}
   /* inline "Schedule an appointment" button on closing screens (left pane) */
   .appt-inline-wrap{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
-  .appt-inline{display:inline-flex;align-items:center;gap:8px;background:var(--accent-soft);
-    border:1.5px solid var(--accent-line);color:var(--accent-deep);border-radius:10px;
-    padding:10px 16px;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .14s;box-shadow:var(--sh-1)}
-  .appt-inline:hover{background:#fff;border-color:var(--accent);color:var(--ink);transform:translateY(-1px);box-shadow:var(--sh-2)}
-  .appt-inline svg{width:15px;height:15px}
+  .appt-inline{display:inline-flex;align-items:center;gap:9px;
+    background:linear-gradient(180deg,#F0A03A,var(--accent));color:#241202;
+    border:none;border-radius:11px;padding:13px 24px;font-size:14.5px;font-weight:700;letter-spacing:.1px;
+    cursor:pointer;transition:transform .14s,box-shadow .14s;
+    box-shadow:0 3px 12px -2px rgba(224,138,32,.6), inset 0 1px 0 rgba(255,255,255,.34)}
+  .appt-inline:hover{transform:translateY(-1px);box-shadow:0 7px 20px -3px rgba(224,138,32,.7), inset 0 1px 0 rgba(255,255,255,.34)}
+  .appt-inline:active{transform:translateY(0)}
+  .appt-inline svg{width:16px;height:16px}
 
   /* ================= split screen ================= */
   /* ---- pane top alignment: first block flush with the other column ---- */
