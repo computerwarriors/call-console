@@ -289,6 +289,18 @@
   .embed-open{display:block;text-align:center;font-size:12.5px;font-weight:600;color:var(--accent-deep);text-decoration:none;padding:11px;border-top:1px solid var(--line-soft);background:var(--paper-2)}
   .embed-open:hover{background:var(--accent-soft)}
 
+  /* ================= appointment cta (info page) ================= */
+  .appt-cta{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+  .appt-cta .btn-primary{align-self:flex-start}
+  .appt-cta .hint{font-size:12px;color:var(--faint)}
+  /* inline "Schedule an appointment" button on closing screens (left pane) */
+  .appt-inline-wrap{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+  .appt-inline{display:inline-flex;align-items:center;gap:8px;background:var(--accent-soft);
+    border:1.5px solid var(--accent-line);color:var(--accent-deep);border-radius:10px;
+    padding:10px 16px;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .14s;box-shadow:var(--sh-1)}
+  .appt-inline:hover{background:#fff;border-color:var(--accent);color:var(--ink);transform:translateY(-1px);box-shadow:var(--sh-2)}
+  .appt-inline svg{width:15px;height:15px}
+
   /* ================= split screen ================= */
   /* ---- pane top alignment: first block flush with the other column ---- */
   .pane > :first-child{margin-top:0}
@@ -484,12 +496,12 @@ const FLOWS = {
           {label:"Not Sure / Needs Evaluation",sub:"Customer doesn't know, or it's just \u201Cnot working\u201D",next:"ns"}
         ]},
       { id:"sw", title:"Software / Performance Issue", end:true, close:true, noAsk:true,
-        say:"Software problems are something we handle all the time. We'll check it in and run diagnostics first, so we know exactly what's going on before we touch anything. Once we've got a quote, we'll reach out by call or text, walk you through it, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWant to bring it by today?"},
+        say:"Software problems are something we handle all the time. We'll check it in and run diagnostics first, so we know exactly what's going on before we touch anything. Once we've got a quote, we'll reach out by call or text, walk you through it, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWould you like to bring it in today, or schedule a time to drop it off?"},
       { id:"hw", title:"Hardware / Physical Issue", end:true, close:true, noAsk:true,
-        say:"Hardware problems are something we handle all the time. We'll check it in and run diagnostics first \u2014 not just the main issue, but the whole machine, so nothing else slips through.\n\nOnce we've got a quote, we'll reach out by call or text, walk you through it, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair, and all hardware repairs come with a one-year warranty against defects. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWant to bring it by today?",
+        say:"Hardware problems are something we handle all the time. We'll check it in and run diagnostics first \u2014 not just the main issue, but the whole machine, so nothing else slips through.\n\nOnce we've got a quote, we'll reach out by call or text, walk you through it, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair, and all hardware repairs come with a one-year warranty against defects. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWould you like to bring it in today, or schedule a time to drop it off?",
         note:"Use for broken screens, hinges, keyboards, battery, charging, no power, overheating, fan noise, liquid damage, and other physical damage."},
       { id:"ns", title:"Not Sure / Needs Evaluation", end:true, close:true, noAsk:true,
-        say:"We'll check it in and run diagnostics first, looking at both hardware and software to figure out what's actually behind it. Once we've got a quote, we'll reach out \u2014 call or text, whichever's easier for you \u2014 walk you through what we found, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair. If it turns out to be hardware, that repair comes with a one-year warranty against defects. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWant to bring it by today?",
+        say:"We'll check it in and run diagnostics first, looking at both hardware and software to figure out what's actually behind it. Once we've got a quote, we'll reach out \u2014 call or text, whichever's easier for you \u2014 walk you through what we found, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair. If it turns out to be hardware, that repair comes with a one-year warranty against defects. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWould you like to bring it in today, or schedule a time to drop it off?",
         note:"Use when the customer is unsure, gives vague symptoms, or says something like \u201Cit just stopped working.\u201D" }
     ]
   },
@@ -658,7 +670,7 @@ function objectionBlock(){
       <div class="reveal" data-orev="shopping">${sayBlock(SAY_SHOPPING)}</div>`;
 }
 
-const SIGNOFF = "And if you have any other questions or concerns along the way, don't hesitate to reach out \u2014 that's what we're here for.";
+const SIGNOFF = "If you have any other questions or concerns along the way, don't hesitate to reach out. That's what we're here for.";
 function signoffBlock(withHeader){
   const inner = sayBlock(SIGNOFF);
   return withHeader
@@ -667,9 +679,9 @@ function signoffBlock(withHeader){
 }
 
 function computerCloseCards(){
-  return `${sayBlock("Perfect! Before you head over \u2014 do you know where we're located?")}`
+  return `${sayBlock("Perfect! Before you head over, do you know where we're located?")}`
     + `${noteBlock("If they're not sure, tap Info at the top and read them the nearest location.")}`
-    + `${sayBlock("Okay, great \u2014 we look forward to seeing you in the shop! " + SIGNOFF,"Then say")}`;
+    + `${sayBlock("Okay, great. We look forward to seeing you in the shop! " + SIGNOFF,"Then say")}`;
 }
 function computerObjections(){
   return `<div class="closing"><div class="closing-h">Objections</div>
@@ -689,9 +701,9 @@ function deviceObjections(){
 function closingBlock(objectionsOnly){
   if(objectionsOnly){
     return `<div class="closing"><div class="closing-h">Close the call</div>
-      ${sayBlock("Perfect! Before you head over \u2014 do you know where we're located?")}
+      ${sayBlock("Perfect! Before you head over, do you know where we're located?")}
       ${noteBlock("If they're not sure, tap Info at the top and read them the nearest location.")}
-      ${sayBlock("Okay, great \u2014 we look forward to seeing you in the shop! " + SIGNOFF,"Then say")}
+      ${sayBlock("Okay, great. We look forward to seeing you in the shop! " + SIGNOFF,"Then say")}
     </div>
     <div class="closing"><div class="closing-h">Objections</div>
       <p class="closing-sub">If they can't come in today, it's almost always timing.</p>
@@ -701,7 +713,7 @@ function closingBlock(objectionsOnly){
   }
   return `<div class="closing"><div class="closing-h">Close the call</div>
     <div class="obj-btns"><button class="obj-b" data-r="yes">They can come in</button><button class="obj-b" data-r="no">Not today</button></div>
-    <div class="reveal" data-rev="yes">${sayBlock("Perfect! Before you head over \u2014 do you know where we're located?")}${noteBlock("If they're not sure, tap Info at the top and read them the nearest location.")}${sayBlock("Okay, great \u2014 we look forward to seeing you in the shop!","Then say")}</div>
+    <div class="reveal" data-rev="yes">${sayBlock("Perfect! Before you head over, do you know where we're located?")}${noteBlock("If they're not sure, tap Info at the top and read them the nearest location.")}${sayBlock("Okay, great. We look forward to seeing you in the shop!","Then say")}</div>
     <div class="reveal" data-rev="no">
       ${sayBlock("No problem at all. Is it the timing, the price, or are you still comparing options?")}
       ${objectionBlock()}
@@ -781,7 +793,19 @@ function benefitLine(cls, noun){
   return `That repair comes with a lifetime warranty against part defects.`;
 }
 
-function tierScript(tier, cls, noun){
+/* Device-specific closing ask. `family` is phone/tablet/console; `other` = the
+   Other Device / manual calculator (device family known, stock status unknown). */
+function closingAsk(tier, cls, family, other){
+  if(family==="console") return "Would you like to bring the console in today, or schedule a time to drop it off?";
+  if(family==="tablet")  return "Would you like to bring it in today, or schedule a time to drop it off?";
+  if(other)              return "Would you like to bring it in today, or schedule a time to come in?";
+  const inStock = tier==="1" && (cls==="screen"||cls==="battery"||cls==="other");
+  return inStock
+    ? "Would you like to bring it in today, or schedule a time to have the repair completed?"
+    : "Would you like to stop by today so we can confirm the exact model and get the part ordered, or schedule a time to come in?";
+}
+
+function tierScript(tier, cls, noun, family, other){
   let benefit;
   if(tier==="3b"){
     benefit = cls==="cleaning" ? benefitLine("cleaning",noun)
@@ -803,7 +827,7 @@ function tierScript(tier, cls, noun){
                            : `Since it's a ${noun}, we'll check it in to confirm the exact model and order the ${partWord(cls)} \u2014 it comes in overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
   else if(tier==="3a") turn = `${noun==="iPad"?"iPads":noun.charAt(0).toUpperCase()+noun.slice(1)+"s"} go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
   else                 turn = `Consoles go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
-  return `${benefit} ${turn} It's only {price} plus tax.\n\nAre you able to come in today?`;
+  return `${benefit} ${turn} It's only {price} plus tax.\n\n${closingAsk(tier,cls,family,other)}`;
 }
 
 function sayAfterFor(cls,noun,turn,label,warranty){
@@ -928,7 +952,7 @@ function renderResult(){
   // LEFT = what to say (warranty + turnaround + price + ask, all in one script)
   let left='';
   if(feed){
-    left=sayBlock(tierScript(tier,cls,noun),"Say to caller");
+    left=sayBlock(tierScript(tier,cls,noun,b.family),"Say to caller");
   } else if(rt==="__other"){
     const CATS=["Screen","Battery","Charging Port","Back Glass / Housing","Other Small Parts"];
     const defDev = b.family==="tablet"?"Tablet":b.family==="console"?"Console":"Phone";
@@ -942,8 +966,11 @@ function renderResult(){
   } else {
     const cat=calcCategoryFor(cls);
     left=calcBlock({device:fam.device,labor:fam.labor,category:cat,noCost:cls==="cleaning",hint:"not in wiki"})
-      + sayBlock(tierScript(tier,cls,noun),"Say after price lookup");
+      + sayBlock(tierScript(tier,cls,noun,b.family),"Say after price lookup");
   }
+
+  // Appointment shortcut sits at the bottom of the left script pane, just above Objections
+  left += apptCtaLeft();
 
   // RIGHT = close the call cards; Objections full-width below — same layout as the computer flow
   const right=computerCloseCards();
@@ -964,7 +991,7 @@ function renderResult(){
     const metaOf=(d,cls)=>{ if(d==="Tablet"||d==="Console") return "2-3 day queue"; if(cls==="backglass"||cls==="charging") return "Next day \u00b7 $50 deposit to order"; return cls==="battery"?"A couple days \u00b7 $50 deposit to order":"Next day \u00b7 $50 deposit to order"; };
     function odRun(){
       const d=dev.value, c=catx.value, cls=clsOf(c);
-      scriptBox.innerHTML=sayBlock(tierScript(tierOf(d),cls,d.toLowerCase()),"Say to caller");
+      scriptBox.innerHTML=sayBlock(tierScript(tierOf(d),cls,d.toLowerCase(),d.toLowerCase(),true),"Say to caller");
       const r=priceCalc(d,c,costx.value===""?"":costx.value,LABOR[d]);
       const sp=scriptBox.querySelector('.say-price'); if(sp) sp.textContent=r?money(r.customer):"$xxx.xx";
       if(metaBox) metaBox.innerHTML=`<span>${esc(c)}</span><span class="dotsep">\u00B7</span><span>${esc(metaOf(d,cls))}</span>`;
@@ -974,6 +1001,22 @@ function renderResult(){
     odRun();
   }
   wireClosing(); wireChecklist();
+
+  // Appointment link: phones -> Phone Repair type; iPad/console -> Repair Queue.
+  // Pre-fill pulls brand/model/repair/price straight from this screen.
+  let getApptUrl;
+  if(rt==="__other"){
+    getApptUrl=()=>{
+      const d=(stage.querySelector('.od-device')||{}).value||"Phone";
+      const c=(stage.querySelector('.od-cat')||{}).value||"";
+      const base=d==="Phone"?APPT_LINKS.phone:APPT_LINKS.queue;
+      return apptUrl(base,{brand:"",model:"",repair:c,price:currentApptPrice()});
+    };
+  } else {
+    const base=(b.family==="tablet"||b.family==="console")?APPT_LINKS.queue:APPT_LINKS.phone;
+    getApptUrl=()=>apptUrl(base,{brand:b.label,model:model||"",repair:repairLabel,price:currentApptPrice()});
+  }
+  wireApptButtons(()=>renderDevice(state.dr), getApptUrl);
 }
 
 function wireClosing(){
@@ -1035,14 +1078,96 @@ function renderInfo(){
     <div class="panel"><div class="panel-body">
       <div class="eyebrow">Hours &amp; locations</div>
       <h2 class="step-title">${esc(SHOP.hours)}</h2>
-      <p class="step-sub">Walk-ins welcome. No appointment needed.</p>
+      <p class="step-sub">Walk-ins welcome — or book a set time below.</p>
       ${loc(SHOP.wilmington)}${loc(SHOP.jacksonville)}
+      <div class="appt-cta">
+        <button class="btn-primary" id="apptBtn">${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')} Book an in-store appointment</button>
+        <span class="hint">Opens the online scheduler — great for a customer who wants a set drop-off time.</span>
+      </div>
     </div></div>`;
   document.getElementById('backBtn').onclick=()=>{
     if(!state) renderHome();
     else if(state.mode==="device" && state.dr) renderDevice(state.dr);
     else renderStep();
   };
+  document.getElementById('apptBtn').onclick=()=>renderAppointments(renderInfo, APPT_LINKS.general);
+}
+
+/* =========================================================================
+   APPOINTMENTS — in-store scheduling (Acuity embed)
+   Fixed-height iframe, same convention as the Cognito / SOHO forms
+   (auto-resize embed.js intentionally omitted — an injected <script>
+   tag doesn't execute via innerHTML anyway, and the iframe stands alone).
+
+   The Info page opens the general scheduler (all categories). Each closing
+   screen opens the matching category and pre-fills the intake form with the
+   details already on screen (brand, model, repair, quoted price).
+   ========================================================================= */
+const ACUITY_BASE = "https://app.acuityscheduling.com/schedule.php?owner=39782661";
+
+// Category / type deep-links (exactly as provided by Acuity)
+const APPT_LINKS = {
+  general:  ACUITY_BASE + "&ref=embedded_csp",
+  computer: ACUITY_BASE + "&appointmentType=category:Computer%20Repair%20Drop-Off%20%E2%80%94%20Laptop%2C%20Desktop%20%26%20Mac",
+  queue:    ACUITY_BASE + "&appointmentType=category:iPad%20%26%20Game%20Console%20Drop-Off%20%E2%80%94%20Repair%20Queue",
+  phone:    ACUITY_BASE + "&appointmentType=95474814"
+};
+
+/* Acuity intake-form field IDs for pre-fill. Acuity pre-fills a custom
+   question with  &field:<ID>=<value>  — the <ID> is the numeric field id
+   from your intake form. FILL THESE IN and pre-fill turns on automatically;
+   leave one blank and that field is simply skipped. If the phone form and the
+   iPad/console form use DIFFERENT questions, we can split these per category. */
+// Acuity form "Repair Booking Details" (id 3321222) — shared by the Phone and
+// iPad/Console appointment types, so one set of IDs covers both.
+const ACUITY_FIELDS = { brand:18807792, model:18807793, repair:18807794, price:18807795 };
+
+function apptUrl(base, prefill){
+  let url=base;
+  if(prefill){
+    for(const key of Object.keys(ACUITY_FIELDS)){
+      const id=ACUITY_FIELDS[key], val=prefill[key];
+      if(id && val!=null && val!=="") url += "&field:"+id+"="+encodeURIComponent(val);
+    }
+  }
+  return url;
+}
+// Read the price currently shown in the script (skips the "$xxx.xx" placeholder)
+function currentApptPrice(){
+  const sp=stage.querySelector('.say-price');
+  const t=sp?sp.textContent.trim():'';
+  return /\$\s*\d/.test(t) ? t.replace(/\s+/g,'') : '';
+}
+
+// `back` re-renders whatever screen we came from, so a tech mid-call returns to
+// the exact result/step. `url` is the category link (defaults to general).
+function renderAppointments(back, url){
+  const ret = typeof back==="function" ? back : renderInfo;
+  const src = url || APPT_LINKS.general;
+  stage.innerHTML=`
+    <div class="flowbar"><button class="back" id="apptBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag"><span class="dot" style="background:var(--accent)"></span>Appointments</span></div>
+    <div class="panel" style="--flow:var(--accent)"><div class="panel-body">
+      <div class="eyebrow">In-store appointment</div>
+      <h2 class="step-title">Schedule a time to come in</h2>
+      <p class="step-sub">Pick a slot below. Walk-ins are always welcome too — this just holds a set time.</p>
+      ${embedBlock({ label:"In-store appointment scheduling", src, height:800, allow:"payment" })}
+    </div></div>`;
+  document.getElementById('apptBack').onclick=ret;
+}
+
+// Small "Schedule an appointment" button placed at the bottom of the left
+// script pane (just above the Objections section) on every closing screen.
+function apptCtaLeft(){
+  return `<div class="appt-inline-wrap"><button class="appt-inline" data-appt="1">`
+    + `${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')} Schedule an appointment</button></div>`;
+}
+// getUrl may be a string or a function evaluated at click time (so a live
+// calculator price is captured the moment the tech taps the button).
+function wireApptButtons(back, getUrl){
+  stage.querySelectorAll('[data-appt]').forEach(b=>b.onclick=()=>{
+    const url = typeof getUrl==="function" ? getUrl() : getUrl;
+    renderAppointments(back, url);
+  });
 }
 
 function startFlow(id){ state={flowId:id,idx:0,actions:new Set()}; history=[]; renderStep(); }
@@ -1057,6 +1182,7 @@ function renderStep(){
   let left='';
   if(step.say) left+=sayBlock(step.say);
   if(step.note) left+=noteBlock(step.note,step.warn);
+  if(step.close) left+=apptCtaLeft();
 
   // RIGHT = what to do
   let right='';
@@ -1086,6 +1212,7 @@ function wireStep(step){
   const prev=document.getElementById('prevBtn'); if(prev) prev.onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} else renderHome(); };
   const next=document.getElementById('nextBtn'); if(next) next.onclick=()=>goNext(step.next);
   const finish=document.getElementById('finishBtn'); if(finish) finish.onclick=goHome;
+  wireApptButtons(()=>renderStep(), APPT_LINKS.computer);
 
   stage.querySelectorAll('.choice').forEach(b=>b.onclick=()=>goNext(step.choices[+b.dataset.choice].next));
 
