@@ -6,7 +6,7 @@
 <title>Call Console — Computer Warriors</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#EDF0F4;
@@ -33,7 +33,7 @@
     --sh-2:0 1px 3px rgba(17,23,33,.06), 0 8px 24px -6px rgba(17,23,33,.10);
     --sh-3:0 2px 6px rgba(17,23,33,.07), 0 16px 40px -12px rgba(17,23,33,.18);
     --disp:'Plus Jakarta Sans',system-ui,sans-serif;
-    --body:'Inter',system-ui,sans-serif;
+    --body:'Plus Jakarta Sans',system-ui,sans-serif;
     --mono:'JetBrains Mono',ui-monospace,monospace;
   }
   *{box-sizing:border-box}
@@ -303,6 +303,20 @@
   .appt-inline:hover{transform:translateY(-1px);box-shadow:0 7px 20px -3px rgba(224,138,32,.7), inset 0 1px 0 rgba(255,255,255,.34)}
   .appt-inline:active{transform:translateY(0)}
   .appt-inline svg{width:16px;height:16px}
+
+  /* ============ parts lookup (Other Device, right column top) ============ */
+  .parts-lookup{margin:0 0 20px;padding:0 0 18px;border-bottom:1px dashed var(--line)}
+  .pl-lbl{font-size:9.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:1.7px;margin-bottom:11px;display:flex;align-items:center;gap:10px}
+  .pl-lbl::after{content:"";flex:1;height:1px;background:var(--line)}
+  .pl-btns{display:flex;flex-direction:column;gap:8px}
+  .pl-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
+    background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px 15px;
+    font-family:var(--disp);font-size:14.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:all .14s;box-shadow:var(--sh-1)}
+  .pl-btn:hover{border-color:var(--navy);background:var(--paper-2);transform:translateY(-1px);box-shadow:var(--sh-2)}
+  .pl-btn .ext{color:var(--faint);flex:none;transition:color .14s}
+  .pl-btn:hover .ext{color:var(--navy)}
+  .pl-btn .ext svg{width:15px;height:15px;display:block}
+  .pl-hint{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.5}
 
   /* ================= split screen ================= */
   /* ---- pane top alignment: first block flush with the other column ---- */
@@ -976,7 +990,7 @@ function renderResult(){
   left += apptCtaLeft();
 
   // RIGHT = close the call cards; Objections full-width below — same layout as the computer flow
-  const right=computerCloseCards();
+  const right=(rt==="__other"?partsLookupBlock():"")+computerCloseCards();
   const full=deviceObjections();
 
   const footer=`<button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
@@ -1020,6 +1034,7 @@ function renderResult(){
     getApptUrl=()=>apptUrl(base,{brand:b.label,model:model||"",repair:repairLabel,price:currentApptPrice()});
   }
   wireApptButtons(()=>renderDevice(state.dr), getApptUrl);
+  stage.querySelectorAll('[data-parts]').forEach(b=>b.onclick=()=>openPartsWindow(b.dataset.parts));
 }
 
 function wireClosing(){
@@ -1160,6 +1175,38 @@ function renderAppointments(back, url){
 
 // Small "Schedule an appointment" button placed at the bottom of the left
 // script pane (just above the Objections section) on every closing screen.
+/* =========================================================================
+   PARTS LOOKUP — Other Device only. Suppliers block being embedded (iframe),
+   so each button pops the store into a window docked on the right half of the
+   screen, beside the console. The tech reads the part cost there and types it
+   into "Part cost" on the left; the quote fills in.
+   ========================================================================= */
+const PARTS_SUPPLIERS = [
+  { name:"MobileSentrix",  url:"https://www.mobilesentrix.com/" },
+  { name:"PhoneLCDParts",  url:"https://www.phonelcdparts.com/" },
+  { name:"Injured Gadgets",url:"https://www.injuredgadgets.com/" }
+];
+const EXT_ICON = ic('<path d="M14 3h7v7"/><path d="M21 3l-9 9"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>');
+function partsLookupBlock(){
+  const btns = PARTS_SUPPLIERS.map(s=>
+    `<button class="pl-btn" data-parts="${esc(s.url)}">${esc(s.name)}<span class="ext">${EXT_ICON}</span></button>`
+  ).join('');
+  return `<div class="parts-lookup"><div class="pl-lbl">Look up part cost</div>`
+    + `<div class="pl-btns">${btns}</div>`
+    + `<div class="pl-hint">Opens beside the console — find the part, then type its cost on the left and the price fills in.</div></div>`;
+}
+let _partsWin=null;
+function openPartsWindow(url){
+  const w = Math.max(560, Math.floor(screen.availWidth/2));
+  const h = screen.availHeight;
+  const left = Math.max(0, screen.availWidth - w);
+  const feat = `width=${w},height=${h},left=${left},top=0,noopener=no`;
+  try{
+    if(_partsWin && !_partsWin.closed){ _partsWin.location.href=url; _partsWin.focus(); }
+    else { _partsWin = window.open(url, 'cw_parts', feat); if(_partsWin) _partsWin.focus(); }
+  }catch(e){ window.open(url, '_blank'); }
+}
+
 function apptCtaLeft(){
   return `<div class="appt-inline-wrap"><button class="appt-inline" data-appt="1">`
     + `${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')} Schedule an appointment</button></div>`;
