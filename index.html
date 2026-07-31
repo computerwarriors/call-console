@@ -308,15 +308,36 @@
   .parts-lookup{margin:0 0 20px;padding:0 0 18px;border-bottom:1px dashed var(--line)}
   .pl-lbl{font-size:9.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:1.7px;margin-bottom:11px;display:flex;align-items:center;gap:10px}
   .pl-lbl::after{content:"";flex:1;height:1px;background:var(--line)}
-  .pl-btns{display:flex;flex-direction:column;gap:8px}
-  .pl-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
-    background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px 15px;
-    font-family:var(--disp);font-size:14.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:all .14s;box-shadow:var(--sh-1)}
-  .pl-btn:hover{border-color:var(--navy);background:var(--paper-2);transform:translateY(-1px);box-shadow:var(--sh-2)}
-  .pl-btn .ext{color:var(--faint);flex:none;transition:color .14s}
-  .pl-btn:hover .ext{color:var(--navy)}
-  .pl-btn .ext svg{width:15px;height:15px;display:block}
-  .pl-hint{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.5}
+  .pl-search{display:flex;gap:8px;margin-bottom:12px}
+  .pl-q{flex:1;min-width:0;font-family:var(--body);font-size:14.5px;color:var(--ink);background:var(--card);
+    border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;outline:none;transition:border-color .15s,box-shadow .15s}
+  .pl-q:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,138,32,.16)}
+  .pl-q::placeholder{color:var(--faint)}
+  .pl-go{flex:none;display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;border:none;border-radius:10px;
+    padding:0 16px;font-family:var(--disp);font-size:13.5px;font-weight:600;cursor:pointer;transition:background .14s}
+  .pl-go:hover{background:var(--navy-2)}
+  .pl-go svg{width:14px;height:14px}
+  .pl-status{font-size:13px;color:var(--muted);padding:6px 2px}
+  .pl-status.warn{color:var(--alert)}
+  .pl-src{font-size:11.5px;color:var(--faint);margin:2px 0 8px}
+  .pl-src b{color:var(--ink);font-weight:600}
+  .pl-list{display:flex;flex-direction:column;gap:6px;max-height:264px;overflow-y:auto;padding-right:3px;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .pl-list::-webkit-scrollbar{width:7px}.pl-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+  .pl-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;
+    background:var(--paper-2);border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;transition:all .13s}
+  .pl-row:hover{border-color:var(--accent);background:var(--card);transform:translateX(2px)}
+  .pl-row.sel{border-color:#C9E2D5;background:var(--good-soft)}
+  .pl-name{font-size:12.5px;color:var(--ink);line-height:1.4}
+  .pl-price{flex:none;font-family:var(--mono);font-size:14px;font-weight:600;color:var(--accent-deep)}
+  .pl-stores{margin-top:14px}
+  .pl-stores-lbl{font-size:9.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:1.3px}
+  .pl-store-btns{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+  .pl-store{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1.5px solid var(--line);border-radius:9px;
+    padding:8px 12px;font-family:var(--disp);font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .14s}
+  .pl-store:hover{border-color:var(--navy);color:var(--ink)}
+  .pl-store .ext{flex:none;color:var(--faint)}
+  .pl-store .ext svg{width:12px;height:12px;display:block}
 
   /* ================= split screen ================= */
   /* ---- pane top alignment: first block flush with the other column ---- */
@@ -1034,7 +1055,7 @@ function renderResult(){
     getApptUrl=()=>apptUrl(base,{brand:b.label,model:model||"",repair:repairLabel,price:currentApptPrice()});
   }
   wireApptButtons(()=>renderDevice(state.dr), getApptUrl);
-  stage.querySelectorAll('[data-parts]').forEach(b=>b.onclick=()=>openPartsWindow(b.dataset.parts));
+  wirePartsLookup();
 }
 
 function wireClosing(){
@@ -1176,24 +1197,70 @@ function renderAppointments(back, url){
 // Small "Schedule an appointment" button placed at the bottom of the left
 // script pane (just above the Objections section) on every closing screen.
 /* =========================================================================
-   PARTS LOOKUP — Other Device only. Suppliers block being embedded (iframe),
-   so each button pops the store into a window docked on the right half of the
-   screen, beside the console. The tech reads the part cost there and types it
-   into "Part cost" on the left; the quote fills in.
+   PARTS LOOKUP — Other Device only. The tech types the part (e.g. "iPhone 12
+   screen"); the app asks its own /api/parts endpoint, which queries the
+   suppliers in priority order (MobileSentrix -> PhoneLCDParts -> Injured
+   Gadgets) and returns the first with results. Tapping a result drops its
+   price into "Part cost" and the quote fills in. The store buttons are a
+   manual fallback — they open the supplier's pre-filled search docked beside
+   the console (suppliers block being embedded, so we open, not iframe).
    ========================================================================= */
 const PARTS_SUPPLIERS = [
-  { name:"MobileSentrix",  url:"https://www.mobilesentrix.com/" },
-  { name:"PhoneLCDParts",  url:"https://www.phonelcdparts.com/" },
-  { name:"Injured Gadgets",url:"https://www.injuredgadgets.com/" }
+  { name:"MobileSentrix",  base:"https://www.mobilesentrix.com" },
+  { name:"PhoneLCDParts",  base:"https://www.phonelcdparts.com" },
+  { name:"Injured Gadgets",base:"https://www.injuredgadgets.com" }
 ];
 const EXT_ICON = ic('<path d="M14 3h7v7"/><path d="M21 3l-9 9"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>');
+const SEARCH_ICON = ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>');
+function partsSearchUrl(base,q){ return base+"/catalogsearch/result/?q="+encodeURIComponent(q||""); }
 function partsLookupBlock(){
-  const btns = PARTS_SUPPLIERS.map(s=>
-    `<button class="pl-btn" data-parts="${esc(s.url)}">${esc(s.name)}<span class="ext">${EXT_ICON}</span></button>`
+  const stores = PARTS_SUPPLIERS.map(s=>
+    `<button class="pl-store" data-store="${esc(s.base)}">${esc(s.name)}<span class="ext">${EXT_ICON}</span></button>`
   ).join('');
-  return `<div class="parts-lookup"><div class="pl-lbl">Look up part cost</div>`
-    + `<div class="pl-btns">${btns}</div>`
-    + `<div class="pl-hint">Opens beside the console — find the part, then type its cost on the left and the price fills in.</div></div>`;
+  return `<div class="parts-lookup">
+    <div class="pl-lbl">Look up part cost</div>
+    <div class="pl-search">
+      <input type="text" class="pl-q" placeholder="e.g. iPhone 12 screen" autocomplete="off" spellcheck="false">
+      <button class="pl-go" type="button">${SEARCH_ICON} Search</button>
+    </div>
+    <div class="pl-results" aria-live="polite"></div>
+    <div class="pl-stores"><span class="pl-stores-lbl">Or open a store</span><div class="pl-store-btns">${stores}</div></div>
+  </div>`;
+}
+function renderPartsResults(el, data, costEl){
+  if(!data || data.error){
+    el.innerHTML = `<div class="pl-status warn">Couldn't reach the lookup — use a store button below.</div>`; return;
+  }
+  const results = (data.results)||[];
+  if(!results.length){
+    el.innerHTML = `<div class="pl-status">No automatic match — try a shorter search or open a store below.</div>`; return;
+  }
+  const rows = results.map(r=>
+    `<button class="pl-row" data-price="${Number(r.price)}"><span class="pl-name">${esc(r.name)}</span><span class="pl-price">$${Number(r.price).toFixed(2)}</span></button>`
+  ).join('');
+  el.innerHTML = `<div class="pl-src">From <b>${esc(data.supplier||'')}</b> · tap to use</div><div class="pl-list">${rows}</div>`;
+  el.querySelectorAll('.pl-row').forEach(row=>row.onclick=()=>{
+    el.querySelectorAll('.pl-row').forEach(x=>x.classList.remove('sel'));
+    row.classList.add('sel');
+    if(costEl){ costEl.value = Number(row.dataset.price).toFixed(2); costEl.dispatchEvent(new Event('input',{bubbles:true})); }
+  });
+}
+function wirePartsLookup(){
+  const q = stage.querySelector('.pl-q'); if(!q) return;
+  const go = stage.querySelector('.pl-go'), resultsEl = stage.querySelector('.pl-results');
+  const costEl = stage.querySelector('.od-cost');
+  const run = async ()=>{
+    const query = q.value.trim();
+    if(!query){ resultsEl.innerHTML=''; return; }
+    resultsEl.innerHTML = `<div class="pl-status">Searching MobileSentrix…</div>`;
+    let data=null;
+    try{ data = await (await fetch('/api/parts?q='+encodeURIComponent(query),{headers:{'Accept':'application/json'}})).json(); }
+    catch(e){ data = {error:String(e&&e.message||e)}; }
+    renderPartsResults(resultsEl, data, costEl);
+  };
+  go.onclick = run;
+  q.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); run(); } });
+  stage.querySelectorAll('[data-store]').forEach(b=>b.onclick=()=>openPartsWindow(partsSearchUrl(b.dataset.store, q.value.trim())));
 }
 let _partsWin=null;
 function openPartsWindow(url){
