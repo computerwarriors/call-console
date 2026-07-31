@@ -87,7 +87,14 @@ async function fetchMobileSentrixApi(q) {
       headers: { "Authorization": header, "Accept": "application/json", "User-Agent": UA },
       signal: ctrl.signal
     });
-    if (!r.ok) return { ok: false, status: r.status, results: [], searchUrl: frontSearchUrl(MS.base, q) };
+    if (!r.ok) {
+      let snippet = "";
+      try { snippet = (await r.text()).replace(/\s+/g, " ").trim().slice(0, 240); } catch (_) {}
+      return {
+        ok: false, status: r.status, results: [], searchUrl: frontSearchUrl(MS.base, q),
+        debug: { server: r.headers.get("server"), cfRay: r.headers.get("cf-ray"), snippet }
+      };
+    }
     const json = await r.json();
     const items = (json && json.data && json.data.items) || [];
     const results = items
@@ -113,7 +120,7 @@ module.exports = async (req, res) => {
 
   const tried = [];
   const ms = await fetchMobileSentrixApi(q);
-  if (!ms.skipped) tried.push({ supplier: "MobileSentrix (API)", ok: ms.ok, status: ms.status, count: ms.results.length, error: ms.error || null });
+  if (!ms.skipped) tried.push({ supplier: "MobileSentrix (API)", ok: ms.ok, status: ms.status, count: ms.results.length, error: ms.error || null, debug: ms.debug || null });
 
   if (ms.ok && ms.results.length) {
     res.status(200).json({ supplier: "MobileSentrix", supplierKey: "mobilesentrix", query: q, searchUrl: ms.searchUrl, results: ms.results, tried });
