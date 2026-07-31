@@ -1235,9 +1235,18 @@ function partInfo(name){
   else if(/playstation|ps5|ps4|ps3/.test(t)) brand="Sony";
   else if(/xbox/.test(t)) brand="Microsoft";
   else if(/nintendo|\bswitch\b/.test(t)) brand="Nintendo";
-  // model = the leading device portion, before the repair/part keyword
-  const cut = s.search(/\b(lcd|oled|amoled|screen|display|digitizer|battery|charging|charge\s*port|back\s*glass|rear\s*glass|back\s*cover|housing|assembly|flex|camera|speaker|earpiece|button|frame|adhesive|glass|lens|replacement|compatible)\b/i);
-  let model = (cut>0 ? s.slice(0,cut) : s).replace(/\s+/g," ").replace(/[\/,;:\-–—(]+\s*$/,"").trim();
+  // model — supplier names are usually "<part> For <device model> (<quality>)",
+  // so prefer the text after "For"; otherwise take the portion before the
+  // repair/part keyword. Then drop the trailing "(...)" quality note.
+  let model = "";
+  const forMatch = s.match(/\bfor\s+(.+)/i);
+  if(forMatch){
+    model = forMatch[1];
+  } else {
+    const cut = s.search(/\b(lcd|oled|amoled|screen|display|digitizer|battery|charging|charge\s*port|back\s*glass|rear\s*glass|back\s*cover|housing|assembly|flex|camera|speaker|earpiece|button|frame|adhesive|glass|lens|replacement|compatible)\b/i);
+    model = cut>0 ? s.slice(0,cut) : s;
+  }
+  model = model.replace(/\s*[\(\[].*$/, "").replace(/\s+/g," ").replace(/[\/,;:\-–—]+\s*$/,"").trim();
   if(model.length>60) model = model.slice(0,60).trim();
   return { device, cat, brand, model };
 }
