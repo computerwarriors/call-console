@@ -1,6 +1,1656 @@
-{
-  "rewrites": [
-    { "source": "/api/parts", "destination": "/api/parts.js" },
-    { "source": "/api/config", "destination": "/api/config.js" }
-  ]
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Call Console — Computer Warriors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDF0F4;
+    --paper-2:#F7F9FB;
+    --card:#FFFFFF;
+    --ink:#111721;
+    --muted:#5A6472;
+    --faint:#8B95A3;
+    --line:#DFE4EB;
+    --line-soft:#EDF0F4;
+    --navy:#111C2E;
+    --navy-2:#1B2A42;
+    --accent:#E08A20;
+    --accent-deep:#B4650C;
+    --accent-soft:#FDF1DF;
+    --accent-line:#F2D8AC;
+    --alert:#BE3A31;
+    --alert-soft:#FCEDEB;
+    --alert-line:#F2CBC6;
+    --good:#1E7A55;
+    --good-soft:#E4F1EB;
+    --r:12px;
+    --sh-1:0 1px 2px rgba(17,23,33,.05);
+    --sh-2:0 1px 3px rgba(17,23,33,.06), 0 8px 24px -6px rgba(17,23,33,.10);
+    --sh-3:0 2px 6px rgba(17,23,33,.07), 0 16px 40px -12px rgba(17,23,33,.18);
+    --disp:'Plus Jakarta Sans',system-ui,sans-serif;
+    --body:'Plus Jakarta Sans',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--body);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;line-height:1.55;font-size:15px}
+  button{font-family:inherit;color:inherit}
+  :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  .shell{display:flex;flex-direction:column;min-height:100%}
+
+  /* ================= header ================= */
+  header.topbar{
+    background:linear-gradient(180deg,var(--navy-2),var(--navy));
+    color:#fff;display:flex;align-items:center;gap:14px;padding:14px 24px;
+    position:sticky;top:0;z-index:40;box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 6px 24px -8px rgba(17,23,33,.5);
+  }
+  .brand{display:flex;align-items:center;gap:13px;min-width:0}
+  .brand-logo{height:38px;width:auto;flex:none;display:block}
+  .brand-sep{width:1px;height:26px;background:rgba(255,255,255,.18);flex:none}
+  .brand-tool{font-family:var(--disp);font-size:14px;font-weight:600;letter-spacing:.2px;color:#EAF0F8;white-space:nowrap}
+  .topbar .spacer{flex:1}
+  .topnav{position:fixed;top:12px;right:14px;z-index:60;display:flex;gap:9px}
+  .topbar-btn{
+    background:#fff;border:1px solid var(--line);color:#26313f;
+    padding:8px 15px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
+    box-shadow:0 6px 18px -8px rgba(20,30,50,.35);
+    display:inline-flex;align-items:center;gap:7px;transition:background .15s,color .15s;
+  }
+  .topbar-btn:hover{background:rgba(255,255,255,.14);color:#fff}
+  .topbar-btn.primary{
+    background:linear-gradient(180deg,#F0A03A,var(--accent));border-color:transparent;color:#241202;font-weight:600;
+    box-shadow:0 2px 8px -2px rgba(224,138,32,.6), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .topbar-btn.primary:hover{background:linear-gradient(180deg,#F5A945,#E8912A);color:#241202}
+
+  .work{max-width:1060px;width:100%;margin:0 auto;padding:16px 24px 60px;flex:1}
+
+  /* ================= home ================= */
+  .greet-home{margin-bottom:34px}
+  .eyebrow{
+    font-size:10px;letter-spacing:1.7px;text-transform:uppercase;color:var(--accent-deep);
+    font-weight:600;margin-bottom:9px;display:flex;align-items:center;gap:9px;
+  }
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--accent-line),transparent)}
+  .home-head{margin:0 0 18px}
+  .home-head h2{font-family:var(--disp);font-size:27px;font-weight:600;margin:0 0 4px;letter-spacing:-.6px}
+  .home-head p{margin:0;color:var(--muted);font-size:14px}
+
+  .tiles{display:grid;gap:11px}
+  .tile{
+    position:relative;overflow:hidden;text-align:left;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-1);
+    padding:17px 18px;cursor:pointer;display:flex;align-items:center;gap:16px;
+    transition:transform .16s cubic-bezier(.2,.7,.3,1),box-shadow .16s,border-color .16s;
+  }
+  .tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--tint);opacity:0;transition:opacity .16s}
+  .tile:hover{transform:translateY(-2px);box-shadow:var(--sh-2);border-color:#CFD7E1}
+  .tile:hover::before{opacity:1}
+  .tile .ic{
+    width:44px;height:44px;border-radius:11px;flex:none;display:grid;place-items:center;
+    background:var(--tint-soft);color:var(--tint);transition:transform .16s;
+  }
+  .tile:hover .ic{transform:scale(1.05)}
+  .tile .ic svg{width:22px;height:22px}
+  .tile .txt{flex:1;min-width:0}
+  .tile h3{font-family:var(--disp);font-size:16.5px;font-weight:600;margin:0 0 2px;letter-spacing:-.3px}
+  .tile p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
+  .tile .arr{color:#C6CEDA;flex:none;transition:color .16s,transform .16s}
+  .tile .arr svg{width:18px;height:18px;display:block}
+  .tile:hover .arr{color:var(--tint);transform:translateX(3px)}
+
+  /* ================= flow chrome ================= */
+  .flowbar{display:flex;align-items:center;gap:13px;margin-bottom:16px;flex-wrap:wrap}
+  .back{
+    background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 13px;
+    font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;display:inline-flex;gap:6px;align-items:center;
+    box-shadow:var(--sh-1);transition:all .14s;
+  }
+  .back:hover{color:var(--ink);border-color:#CFD7E1;transform:translateX(-1px)}
+  .back svg{width:15px;height:15px}
+  .flowtag{display:inline-flex;align-items:center;gap:9px;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .flowtag .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .steptrack{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.5px}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh-2);overflow:hidden;position:relative}
+  .panel::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--flow,var(--accent))}
+  .greet-home::before{background:var(--accent)}
+  .panel-body{padding:30px 32px 30px}
+  .step-title{font-family:var(--disp);font-size:24px;font-weight:600;margin:0 0 4px;letter-spacing:-.6px;line-height:1.25}
+  .step-sub{margin:0 0 20px;color:var(--muted);font-size:14px}
+
+  /* ================= say block ================= */
+  .say{
+    position:relative;background:linear-gradient(165deg,var(--navy-2),var(--navy));
+    color:#EEF2F8;border-radius:13px;padding:20px 24px 20px 26px;margin:4px 0 18px;
+    font-size:16px;line-height:1.62;box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  .say::after{
+    content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0;
+    background:linear-gradient(180deg,var(--accent),transparent);
+  }
+  .say .lbl{display:block;font-size:9.5px;letter-spacing:1.7px;text-transform:uppercase;color:#8497B2;margin-bottom:11px;font-weight:600}
+  .say p{margin:0 0 13px}.say p:last-child{margin-bottom:0}
+  .say-price{font-family:var(--mono);font-weight:600;color:#FFC880;background:rgba(255,200,128,.1);padding:1px 6px;border-radius:5px}
+
+  /* ================= internal note ================= */
+  .note{
+    background:var(--accent-soft);border:1px solid var(--accent-line);border-left:3px solid var(--accent);
+    border-radius:9px;padding:12px 15px;margin:0 0 18px;font-size:13.5px;color:#6E4708;line-height:1.6;
+  }
+  .note .nk{display:block;font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent-deep);font-weight:600;margin-bottom:4px}
+  .note.warn{background:var(--alert-soft);border-color:var(--alert-line);border-left-color:var(--alert);color:#7E2A23}
+  .note.warn .nk{color:var(--alert)}
+  .note b{color:#3A2A0A;font-weight:600}
+  .note .near{display:block;color:#8A6A2A;font-size:12.5px;margin-top:2px}
+
+  /* ================= choices ================= */
+  .choices{display:grid;gap:10px;margin-top:20px}
+  .choice{
+    text-align:left;background:var(--paper-2);border:1.5px solid var(--line);border-radius:11px;
+    padding:15px 17px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;
+    transition:all .15s cubic-bezier(.2,.7,.3,1);
+  }
+  .choice:hover{background:var(--card);border-color:var(--flow,var(--accent));transform:translateX(3px);box-shadow:var(--sh-1)}
+  .choice .lab{font-family:var(--disp);font-size:16px;font-weight:600;letter-spacing:-.3px}
+  .choice small{display:block;font-family:var(--body);font-weight:400;color:var(--muted);font-size:12.5px;margin-top:3px;letter-spacing:0}
+  .choice .arr{color:#C6CEDA;flex:none;transition:color .15s,transform .15s}
+  .choice .arr svg{width:17px;height:17px;display:block}
+  .choice:hover .arr{color:var(--flow,var(--accent));transform:translateX(2px)}
+
+  /* ================= accordions ================= */
+  .sec-lbl{
+    font-size:9.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:1.7px;
+    margin:30px 0 6px;display:flex;align-items:center;gap:10px;
+  }
+  .sec-lbl::after{content:"";flex:1;height:1px;background:var(--line)}
+  .acc{border:1.5px solid var(--line);border-radius:11px;margin-bottom:9px;overflow:hidden;background:var(--card);transition:border-color .15s,box-shadow .15s}
+  .acc:hover{border-color:#CFD7E1}
+  .acc.open{border-color:var(--flow,var(--accent));box-shadow:var(--sh-1)}
+  .acc-head{width:100%;display:flex;align-items:center;gap:13px;padding:14px 16px;background:var(--paper-2);border:none;cursor:pointer;text-align:left;transition:background .15s}
+  .acc-head:hover{background:#F1F4F8}
+  .acc.open .acc-head{background:var(--card);border-bottom:1px solid var(--line-soft)}
+  .acc-title{font-family:var(--disp);font-size:15.5px;font-weight:600;letter-spacing:-.3px}
+  .acc-meta{margin-left:auto;font-size:11.5px;color:var(--faint);text-align:right;max-width:50%}
+  .acc-arr{color:#C6CEDA;flex:none;transition:transform .2s,color .15s}
+  .acc-arr svg{width:17px;height:17px;display:block}
+  .acc.open .acc-arr{transform:rotate(180deg);color:var(--flow,var(--accent))}
+  .acc-body{display:none;padding:18px 16px 18px}
+  .acc.open .acc-body{display:block}
+
+  /* ================= calculator ================= */
+  .calc{
+    background:linear-gradient(165deg,var(--navy-2),var(--navy));border-radius:12px;padding:17px 19px;margin-bottom:18px;
+    box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  .calc-lbl{font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:#8497B2;font-weight:600;margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .feed-tag{font-size:9.5px;letter-spacing:1.2px;font-weight:600;text-transform:uppercase}
+  .feed-tag.okfeed{color:#6FBF95}
+  .feed-tag.warnfeed{color:#D9A05B}
+  .c-model-field{flex:2;min-width:170px}
+  .c-field input:read-only{opacity:.55;cursor:not-allowed}
+  .calc-inputs{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:15px}
+  .c-field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:104px}
+  .c-field .cl{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:#8497B2;font-weight:600}
+  .c-field input,.c-field select{
+    font-family:var(--mono);font-size:15px;font-weight:500;color:#fff;background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:9px 11px;width:100%;transition:all .15s;
+  }
+  .c-field select{font-family:var(--body);font-size:14px;font-weight:500}
+  .c-field select option{color:var(--ink)}
+  .c-field input::placeholder{color:#6B7C93}
+  .c-field input:focus,.c-field select:focus{outline:none;border-color:var(--accent);background:rgba(255,255,255,.12);box-shadow:0 0 0 3px rgba(224,138,32,.16)}
+  .calc-out{display:flex;flex-wrap:wrap;gap:14px;align-items:stretch;border-top:1px solid rgba(255,255,255,.12);padding-top:15px}
+  .price-main{
+    flex:1;min-width:170px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:10px 14px;
+    font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:#8497B2;font-weight:600;
+  }
+  .price-main b{display:block;font-family:var(--mono);font-size:26px;font-weight:600;color:#fff;letter-spacing:-1px;margin-top:4px;line-height:1.1}
+  .price-main .plus{font-family:var(--body);font-size:11px;letter-spacing:.3px;text-transform:none;color:#8497B2;font-weight:400;margin-left:7px}
+  .price-mra{
+    flex:1;min-width:150px;background:rgba(224,138,32,.1);border:1px solid rgba(224,138,32,.28);border-radius:9px;padding:10px 14px;
+    font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:#C9A374;font-weight:600;
+  }
+  .price-mra b{display:block;font-family:var(--mono);font-size:20px;font-weight:600;color:#FFC880;margin-top:5px;letter-spacing:-.6px;line-height:1.15}
+
+  .cov{
+    font-size:13px;color:var(--muted);background:var(--good-soft);border:1px solid #C9E2D5;border-radius:9px;padding:10px 14px;
+    display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;
+  }
+  .cov .ck{font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--good);font-weight:600;flex:none}
+  .cov .c-cov,.cov{color:#1F4A38}
+
+  /* ================= closing ================= */
+  .closing{margin-top:32px;padding-top:24px;border-top:1px dashed var(--line)}
+  .closing-h{font-family:var(--disp);font-size:18px;font-weight:600;margin-bottom:15px;letter-spacing:-.4px;display:flex;align-items:center;gap:9px}
+  .closing-h::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .closing-sub{margin:-8px 0 14px;color:var(--muted);font-size:13.5px}
+  .signoff{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+  .obj-btns{display:flex;gap:9px;flex-wrap:wrap;margin:2px 0}
+  .obj-btns.sub{margin-top:14px}
+  .obj-b{
+    border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:9px 16px;
+    font-size:13.5px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .14s;box-shadow:var(--sh-1);
+  }
+  .obj-b:hover{border-color:var(--accent);color:var(--ink);transform:translateY(-1px)}
+  .obj-b.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--sh-2)}
+  .reveal{display:none;margin-top:16px}
+  .reveal.show{display:block;animation:fade .22s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .mini-note{
+    font-size:12.5px;color:#6E4708;background:var(--accent-soft);border:1px solid var(--accent-line);
+    border-radius:8px;padding:9px 13px;margin-top:-6px;
+  }
+  .mini-note b{color:#3A2A0A;font-weight:600;font-family:var(--mono);font-size:12px}
+
+  /* ================= checklist ================= */
+  .checklist-lbl{
+    font-size:9.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:1.7px;
+    margin:32px 0 10px;display:flex;align-items:center;gap:10px;
+  }
+  .checklist-lbl::after{content:"";flex:1;height:1px;background:var(--line)}
+  .actions-list{display:grid;gap:8px}
+  .act{
+    width:100%;display:flex;align-items:flex-start;gap:12px;border:1.5px solid var(--line);border-radius:10px;
+    padding:12px 14px;cursor:pointer;background:var(--paper-2);transition:all .14s;font-size:14px;text-align:left;color:var(--ink);
+  }
+  .act:hover{border-color:#CFD7E1;background:var(--card)}
+  .act .box{width:19px;height:19px;border-radius:6px;border:1.5px solid var(--faint);flex:none;display:grid;place-items:center;margin-top:2px;transition:all .14s}
+  .act.on{background:var(--good-soft);border-color:#C9E2D5;color:var(--muted)}
+  .act.on .box{background:var(--good);border-color:var(--good)}
+  .act.on .box svg{opacity:1}
+  .act .box svg{width:11px;height:11px;opacity:0;color:#fff}
+  .act.on .lbl-txt{text-decoration:line-through;text-decoration-color:#A9C4B6}
+
+  /* ================= footer ================= */
+  .footer-nav{display:flex;gap:11px;align-items:center;padding:18px 32px;border-top:1px solid var(--line);background:var(--paper-2)}
+  .btn-primary{
+    background:linear-gradient(180deg,#F0A03A,var(--accent));color:#241202;border:none;border-radius:10px;
+    padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:9px;
+    box-shadow:0 2px 10px -2px rgba(224,138,32,.55), inset 0 1px 0 rgba(255,255,255,.32);transition:transform .14s,box-shadow .14s;
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 14px -2px rgba(224,138,32,.6), inset 0 1px 0 rgba(255,255,255,.32)}
+  .btn-primary svg{width:15px;height:15px}
+  .btn-ghost{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:11px 20px;font-size:13.5px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .14s}
+  .btn-ghost:hover{color:var(--ink);border-color:#CFD7E1}
+  .footer-nav .push{margin-left:auto}
+  .hint{font-size:12px;color:var(--faint)}
+
+  /* ================= embedded form ================= */
+  .embed{margin:2px 0 20px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);box-shadow:var(--sh-1)}
+  .embed-lbl{font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);font-weight:600;padding:12px 16px;border-bottom:1px solid var(--line-soft);background:var(--paper-2)}
+  .embed iframe{display:block}
+  .embed-open{display:block;text-align:center;font-size:12.5px;font-weight:600;color:var(--accent-deep);text-decoration:none;padding:11px;border-top:1px solid var(--line-soft);background:var(--paper-2)}
+  .embed-open:hover{background:var(--accent-soft)}
+
+  /* ================= appointment cta (info page) ================= */
+  .appt-cta{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+  .appt-cta .btn-primary{align-self:flex-start}
+  .appt-cta .hint{font-size:12px;color:var(--faint)}
+  /* inline "Schedule an appointment" button on closing screens (left pane) */
+  .appt-inline-wrap{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+  .appt-inline{display:inline-flex;align-items:center;gap:9px;
+    background:linear-gradient(180deg,#F0A03A,var(--accent));color:#241202;
+    border:none;border-radius:11px;padding:13px 24px;font-size:14.5px;font-weight:700;letter-spacing:.1px;
+    cursor:pointer;transition:transform .14s,box-shadow .14s;
+    box-shadow:0 3px 12px -2px rgba(224,138,32,.6), inset 0 1px 0 rgba(255,255,255,.34)}
+  .appt-inline:hover{transform:translateY(-1px);box-shadow:0 7px 20px -3px rgba(224,138,32,.7), inset 0 1px 0 rgba(255,255,255,.34)}
+  .appt-inline:active{transform:translateY(0)}
+  .appt-inline svg{width:16px;height:16px}
+
+  /* ============ parts lookup (Other Device, right column top) ============ */
+  .parts-lookup{margin:0 0 20px;padding:0 0 18px;border-bottom:1px dashed var(--line)}
+  .pl-lbl{font-size:9.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:1.7px;margin-bottom:11px;display:flex;align-items:center;gap:10px}
+  .pl-lbl::after{content:"";flex:1;height:1px;background:var(--line)}
+  .pl-search{display:flex;gap:8px;margin-bottom:12px}
+  .pl-q{flex:1;min-width:0;font-family:var(--body);font-size:14.5px;color:var(--ink);background:var(--card);
+    border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;outline:none;transition:border-color .15s,box-shadow .15s}
+  .pl-q:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,138,32,.16)}
+  .pl-q::placeholder{color:var(--faint)}
+  .pl-go{flex:none;display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;border:none;border-radius:10px;
+    padding:0 16px;font-family:var(--disp);font-size:13.5px;font-weight:600;cursor:pointer;transition:background .14s}
+  .pl-go:hover{background:var(--navy-2)}
+  .pl-go svg{width:14px;height:14px}
+  .pl-status{font-size:13px;color:var(--muted);padding:6px 2px}
+  .pl-status.warn{color:var(--alert)}
+  .pl-src{font-size:11.5px;color:var(--faint);margin:2px 0 8px}
+  .pl-src b{color:var(--ink);font-weight:600}
+  .pl-list{display:flex;flex-direction:column;gap:6px;max-height:264px;overflow-y:auto;padding-right:3px;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .pl-list::-webkit-scrollbar{width:7px}.pl-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+  .pl-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;
+    background:var(--paper-2);border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;transition:all .13s}
+  .pl-row:hover{border-color:var(--accent);background:var(--card);transform:translateX(2px)}
+  .pl-row.sel{border-color:#C9E2D5;background:var(--good-soft)}
+  .pl-name{font-size:12.5px;color:var(--ink);line-height:1.4}
+  .pl-price{flex:none;font-family:var(--mono);font-size:14px;font-weight:600;color:var(--accent-deep)}
+  .pl-stores{margin-top:14px}
+  .pl-stores-lbl{font-size:9.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:1.3px}
+  .pl-store-btns{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+  .pl-store{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1.5px solid var(--line);border-radius:9px;
+    padding:8px 12px;font-family:var(--disp);font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .14s}
+  .pl-store:hover{border-color:var(--navy);color:var(--ink)}
+  .pl-store .ext{flex:none;color:var(--faint)}
+  .pl-store .ext svg{width:12px;height:12px;display:block}
+
+  /* ================= split screen ================= */
+  /* ---- pane top alignment: first block flush with the other column ---- */
+  .pane > :first-child{margin-top:0}
+  .pane-choices > .closing:first-child,
+  .pane-choices > .signoff:first-child{margin-top:0;padding-top:0;border-top:none}
+
+  .panel-head{padding:26px 30px 4px}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:16px 30px 28px;align-items:start}
+  .split.solo{grid-template-columns:1fr}
+  .pane{min-width:0}
+  .pane{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .pane::-webkit-scrollbar{width:8px}
+  .pane::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+  .pane::-webkit-scrollbar-track{background:transparent}
+  .pane-script{position:sticky;top:20px;align-self:start}
+  .pane-choices{min-width:0}
+  .pane-title{font-family:var(--disp);font-size:15px;font-weight:600;letter-spacing:.2px;margin:0 0 3px;color:var(--ink)}
+  .pane-sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .split .scroll-list{max-height:56vh}
+  .fullrow{padding:20px 30px 26px;border-top:1px dashed var(--line);margin-top:4px}
+  .odc-inputs{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 16px}
+  .odc-inputs .c-field{flex:1;min-width:130px}
+  .odc-inputs .c-field .cl{color:#5A6472}
+  .odc-inputs .c-field input,
+  .odc-inputs .c-field select{
+    color:var(--ink);background:#F4F6FA;border:1px solid #C6D0DD;border-radius:9px;
+    padding:11px 12px;font-size:15px;cursor:text;box-shadow:inset 0 1px 2px rgba(20,30,50,.04)}
+  .odc-inputs .c-field select{
+    cursor:pointer;-webkit-appearance:none;appearance:none;padding-right:34px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235A6472' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 11px center}
+  .odc-inputs .c-field input::placeholder{color:#9AA7B8}
+  .odc-inputs .c-field input:focus,
+  .odc-inputs .c-field select:focus{
+    outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,138,32,.16)}
+  @media (min-width:880px) and (max-height:860px){
+    .work{padding-top:14px;padding-bottom:40px}
+    .flowbar{margin-bottom:8px}
+    .panel-head{padding:14px 30px 2px}
+    .step-title{font-size:21px;margin-bottom:2px}
+    .split{padding-top:8px;gap:18px}
+    .say{margin:2px 0 12px}
+  }
+  .fullrow .closing{margin-top:0;padding-top:0;border-top:none}
+  @media (max-width:880px){
+    .split{grid-template-columns:1fr;gap:16px;padding:14px 18px 22px}
+    .fullrow{padding:16px 18px 20px}
+    .pane-script{position:static;top:auto}
+    .panel-head{padding:22px 18px 2px}
+    .split .scroll-list{max-height:46vh}
+  }
+
+  /* ================= model search + scroll ================= */
+  .model-search{position:relative;margin:2px 0 12px}
+  .model-search input{width:100%;box-sizing:border-box;font-family:var(--body);font-size:15px;color:var(--ink);
+    padding:12px 14px 12px 40px;border:1px solid var(--line);border-radius:10px;background:var(--card);outline:none;transition:border-color .15s,box-shadow .15s}
+  .model-search input:focus{border-color:var(--flow,#3A6EA5);box-shadow:0 0 0 3px color-mix(in srgb,var(--flow,#3A6EA5) 16%,transparent)}
+  .model-search input::placeholder{color:var(--faint)}
+  .model-search .ms-ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--faint);pointer-events:none}
+  .model-search .ms-ic svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2}
+  .scroll-list{max-height:46vh;overflow-y:auto;padding-right:4px;-webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .scroll-list::-webkit-scrollbar{width:8px}
+  .scroll-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+  .scroll-list::-webkit-scrollbar-track{background:transparent}
+  .no-match{padding:14px 4px;color:var(--faint);font-size:13.5px;text-align:center}
+  .model-other{border-style:dashed}
+
+  /* ================= wiki price hero ================= */
+  .pricehero{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:2px 0 18px;background:linear-gradient(180deg,#FFFFFF,#FBFCF9);box-shadow:var(--sh-1)}
+  .ph-head{font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .ph-amt{font-family:var(--mono);font-size:38px;font-weight:600;color:var(--ink);letter-spacing:-1.5px;line-height:1}
+  .ph-plus{font-family:var(--body);font-size:13px;letter-spacing:.3px;color:var(--faint);font-weight:400;margin-left:9px}
+  .ph-warr{margin-top:9px;font-size:13px;font-weight:500;color:var(--good);background:var(--good-soft);border:1px solid #C9E2D5;border-radius:7px;padding:5px 11px;display:inline-block}
+  .feed-line{font-size:11.5px;color:var(--good);font-weight:500;margin:-8px 0 14px}
+  .feed-tag.okfeed{color:var(--good)}
+  .feed-tag.warnfeed{color:var(--accent-deep)}
+
+  /* ================= device result ================= */
+  .result-meta{display:flex;align-items:center;gap:9px;margin:-2px 0 18px;font-size:12.5px;color:var(--muted);font-weight:500}
+  .result-meta .dotsep{color:var(--faint)}
+  .result-wrap{margin-bottom:4px}
+  .c-model-fixed{display:flex;flex-direction:column;gap:6px;flex:1;min-width:104px}
+  .c-model-fixed .cl{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:#8497B2;font-weight:600}
+  .c-model-fixed .mv{font-family:var(--body);font-size:15px;font-weight:600;color:#fff;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+
+  /* ================= info ================= */
+  .cheat{font-size:14px;color:var(--muted);list-style:none;padding:0;margin:0;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .cheat li{padding:12px 16px;border-bottom:1px solid var(--line-soft);display:flex;gap:16px;align-items:baseline;background:var(--card)}
+  .cheat li:nth-child(even){background:var(--paper-2)}
+  .cheat li:last-child{border-bottom:none}
+  .cheat .ct{font-weight:600;color:var(--ink);flex:none;width:196px;font-size:13.5px}
+  @media(max-width:600px){.cheat li{display:block}.cheat .ct{width:auto;margin-bottom:2px}}
+
+  @media(max-width:600px){
+    header.topbar{padding:12px 16px}
+    .topbar-btn{padding:8px 12px}
+    .brand-logo{height:32px}
+    .brand{gap:10px}
+    .work{padding:22px 16px 56px}
+    .panel-body{padding:22px 18px 22px}
+    .footer-nav{padding:16px 18px}
+    .say{padding:18px 18px 18px 20px;font-size:15.5px}
+    .step-title{font-size:21px}
+    .tile .ic{width:40px;height:40px}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topnav">
+    <button class="topbar-btn" id="infoBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> Info</button>
+    <button class="topbar-btn primary" id="homeBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg> Home</button>
+  </div>
+  <div class="work" id="stage"></div>
+</div>
+
+<script>
+
+
+/* =========================================================================
+   EDIT ZONE — store details, greeting, warranty rules, flows.
+   ENGINE (further down) is plumbing you shouldn't need to touch.
+   ========================================================================= */
+/* Live pricing feed — generated from the RepairShopr wiki by n8n.
+   Point this at the raw JSON (GitHub raw, or a Vercel-served /pricing.json).
+   Leave it as-is and the tool still works: techs just type the part cost by hand. */
+// Live pricing feed. n8n commits these two files into this same repo,
+// so the app fetches them same-origin (no cross-repo, no auth, no CORS).
+// They stay in weekly/quarterly sync with the RepairShopr wiki + quote widget.
+const PRICING_URLS = ["prices-devices.json", "prices-consoles.json"];
+
+const SHOP = {
+  hours: "Mon-Fri 9am-6pm, Sat 10am-2pm",
+  wilmington: { name:"Wilmington", addr:"5500 Market Street, Suite 100B, Wilmington NC 28405",
+    near:"Same shopping center as Johnny Luke's \u2014 next to Club Champion, across from the Nissan dealership on Market Street", phone:"" },
+  jacksonville:{ name:"Jacksonville", addr:"1132 Western Blvd, Jacksonville NC 28546",
+    near:"Shopping center in front of Best Buy & Staples, next to American Dream Cakes and Margolis Men's Store on Western", phone:"" }
+};
+
+// Default labor by calculator device type
+const LABOR = { Phone:80, Tablet:110, Console:100 };
+
+// Warranty / coverage wording (single source of truth)
+const COV = {
+  screen:"Lifetime part-defect warranty + one free screen re-repair within 12 months",
+  battery:"1-year part-defect warranty",
+  lifetime:"Lifetime part-defect warranty",
+  computerHw:"1-year part-defect warranty",
+  consoleHw:"1-year part-defect warranty (if a part is replaced)",
+  cleaning:"No part warranty unless a part is replaced",
+  software:"No part warranty (no replacement part is installed)"
+};
+
+const CHECKLIST = [
+  "Started or updated the ticket in RepairShopr",
+  "Confirmed device type and issue",
+  "Gave price or explained the repair deposit / evaluation process",
+  "Explained turnaround time",
+  "Explained the correct warranty or coverage",
+  "Asked if they can come in today",
+  "Texted quote, directions, or financing link if needed"
+];
+const CHECKLIST_SUPPORT = [
+  "Started or updated the ticket",
+  "Verified authorized contact (business clients)",
+  "Explained the next step / scheduling",
+  "Escalated if they're down and can't work"
+];
+
+/* ---- section builders (attach default labor automatically) ---- */
+function sec(o){ return Object.assign({ labor: LABOR[o.device] }, o); }
+
+// pricing sections reused across phone brands
+const OTHER_PHONE_CATS = ["Charging Port","Back Glass / Housing","Other Small Parts"];
+
+const FLOWS = {
+  /* ============ COMPUTER ============ */
+  computer: {
+    label:"Computer Repair", color:"#2F73C4", tint:"#2F73C4", tintSoft:"#E2ECF8",
+    desc:"Laptop or desktop repair.",
+    icon:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    steps:[
+      { id:"issue", title:"What kind of computer issue?",
+        say:"You definitely called the right place.",
+        sub:"Pick the closest match.",
+        choices:[
+          {label:"Software / Performance Issue",sub:"Slow, virus, pop-ups, freezing, updates, software problems",next:"sw"},
+          {label:"Hardware / Physical Issue",sub:"Screen, hinge, keyboard, charging, battery, no power, overheating, liquid, physical damage",next:"hw"},
+          {label:"Not Sure / Needs Evaluation",sub:"Customer doesn't know, or it's just \u201Cnot working\u201D",next:"ns"}
+        ]},
+      { id:"sw", title:"Software / Performance Issue", end:true, close:true, noAsk:true,
+        say:"Software problems are something we handle all the time. We'll check it in and run diagnostics first, so we know exactly what's going on before we touch anything. Once we've got a quote, we'll reach out by call or text, walk you through it, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWould you like to bring it in today, or schedule a time to drop it off?"},
+      { id:"hw", title:"Hardware / Physical Issue", end:true, close:true, noAsk:true,
+        say:"Hardware problems are something we handle all the time. We'll check it in and run diagnostics first \u2014 not just the main issue, but the whole machine, so nothing else slips through.\n\nOnce we've got a quote, we'll reach out by call or text, walk you through it, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair, and all hardware repairs come with a one-year warranty against defects. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWould you like to bring it in today, or schedule a time to drop it off?",
+        note:"Use for broken screens, hinges, keyboards, battery, charging, no power, overheating, fan noise, liquid damage, and other physical damage."},
+      { id:"ns", title:"Not Sure / Needs Evaluation", end:true, close:true, noAsk:true,
+        say:"We'll check it in and run diagnostics first, looking at both hardware and software to figure out what's actually behind it. Once we've got a quote, we'll reach out \u2014 call or text, whichever's easier for you \u2014 walk you through what we found, and you decide how to handle it. Nothing extra happens without your okay.\n\nThere's a fifty-dollar deposit at drop-off that goes toward the repair. If it turns out to be hardware, that repair comes with a one-year warranty against defects. We work on devices in the order they come in, so you're looking at about two to three business days \u2014 sooner it's in, sooner we know what's going on.\n\nWould you like to bring it in today, or schedule a time to drop it off?",
+        note:"Use when the customer is unsure, gives vague symptoms, or says something like \u201Cit just stopped working.\u201D" }
+    ]
+  },
+
+  /* ============ ONSITE / REMOTE ============ */
+  support: {
+    label:"SOHO", color:"#0E7C86", tint:"#0E7C86", tintSoft:"#DDF0F1",
+    desc:"Onsite Support, Remote Support, Managed IT Services",
+    icon:'<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14a2 2 0 0 0 2 2h1v-5H6a2 2 0 0 0-2 2z"/><path d="M20 14a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2z"/><path d="M18 16v1a3 3 0 0 1-3 3h-3"/>',
+    steps:[
+      { id:"type", title:"What kind of support?",
+        choices:[
+          {label:"Immediate Need",sub:"Individual / Business \u2014 remote or onsite support",next:"retail"},
+          {label:"Project Request",sub:"A defined project \u2014 scoped and quoted",next:"project"},
+          {label:"Managed IT Services",sub:"For a business looking for someone to manage their IT",next:"business"}
+        ]},
+      { id:"retail", title:"Immediate Retail Need", end:true, checklist:CHECKLIST_SUPPORT,
+        embed:{ label:"Retail intake form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/1", height:950, allow:"payment" } },
+      { id:"project", title:"Project Request", end:true, checklist:CHECKLIST_SUPPORT,
+        embed:{ label:"Project request form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/8", height:804, allow:"payment" } },
+      { id:"business", title:"Business IT Services", end:true, checklist:CHECKLIST_SUPPORT,
+        say:"Great \u2014 we do offer managed IT support for businesses. So I can point you to the right team, roughly how many computers or workstations does the business run?",
+        note:"15 or more workstations \u2192 CW IT Support. Under 15 \u2192 SOHO. Pick the tier below to load their form.",
+        choices:[
+          {label:"CW IT Support",sub:"15+ workstations",next:"cwit"},
+          {label:"SOHO",sub:"Under 15 workstations",next:"soho"}
+        ]},
+      { id:"cwit", title:"CW IT Support", end:true, checklist:CHECKLIST_SUPPORT,
+        embed:{ label:"CW IT Support intake (Microsoft Forms)", src:"https://forms.office.com/pages/responsepage.aspx?id=QUPNWJGZf0ivzgJ-ogJ3nxjyuUiHs5BFo_RZAkiOb_RUNThKVFozMjYwMU1aOUk0MUdVTVRSNEhIRy4u&route=shorturl&embed=true", height:1100 } },
+      { id:"soho", title:"SOHO", end:true, checklist:CHECKLIST_SUPPORT,
+        embed:{ label:"SOHO intake", src:"https://api.leadconnectorhq.com/widget/form/2EZ8WBvnOoNaATMVCH60", height:900 },
+        sayAfterEmbed:"Your request has been submitted \u2014 keep an eye on your email for a confirmation with your appointment details." }
+    ]
+  }
+};
+
+/* =========================================================================
+   ADMIN CONFIG — script overrides, loaded from /api/config (n8n-backed).
+   Techs never see this; the shop owner opens it at #admin with a PIN and
+   edits the scripts. Overrides are looked up by key with ov('group.key');
+   if there's no override the code's built-in default text is used.
+   ========================================================================= */
+let ADMIN_CFG = {};
+const DEF = {};   // built-in default text, captured as t() is called (used by the admin panel)
+function deepGet(obj, path){
+  return String(path).split('.').reduce((o,k)=> (o && o[k]!==undefined ? o[k] : undefined), obj);
 }
+function deepSet(obj, path, val){
+  const keys = String(path).split('.'); let o = obj;
+  for(let i=0;i<keys.length-1;i++){ if(typeof o[keys[i]]!=='object'||o[keys[i]]===null) o[keys[i]]={}; o=o[keys[i]]; }
+  o[keys[keys.length-1]] = val;
+}
+function ov(path){ const v = deepGet(ADMIN_CFG, path); return (v===undefined || v===null || v==='') ? null : v; }
+// t(path, fallback): override if present, else the built-in default text.
+function t(path, fallback){
+  if(fallback!==undefined && DEF[path]===undefined) DEF[path]=fallback;
+  const o = ov(path);
+  return o!=null ? o : (fallback!==undefined ? fallback : (DEF[path]||''));
+}
+
+async function loadAdminConfig(){
+  try{
+    const r = await fetch('/api/config.js', { headers:{ 'Accept':'application/json' }, cache:'no-store' });
+    const d = await r.json();
+    if(d && d.config && typeof d.config==='object') ADMIN_CFG = d.config;
+  }catch(e){ /* keep defaults */ }
+}
+
+/* =========================================================================
+   ENGINE
+   ========================================================================= */
+const stage=document.getElementById('stage');
+let state=null; let history=[];
+
+/* ---- fit the two columns to the viewport; Objections sit below the fold ---- */
+function fitToViewport(){
+  stage.querySelectorAll('.pane').forEach(p=>{ p.style.maxHeight=''; p.style.overflowY=''; p.style.position=''; });
+  const split=stage.querySelector('.split');
+  if(!split || split.classList.contains('solo')) return;
+  if(!window.matchMedia('(min-width:880px)').matches) return;   // stacked on narrow screens
+  const top=split.getBoundingClientRect().top;
+  const avail=Math.max(200, Math.floor(window.innerHeight - top - 16));
+  split.querySelectorAll('.pane').forEach(p=>{ p.style.maxHeight=avail+'px'; p.style.overflowY='auto'; p.style.position='static'; });
+}
+let _fitRAF;
+function scheduleFit(){ cancelAnimationFrame(_fitRAF); _fitRAF=requestAnimationFrame(fitToViewport); }
+
+const ic=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=x=>`$${Number(x).toFixed(2)}`;
+const round2=x=>Math.round(x*100)/100;
+const R495 =x=>round2(Math.ceil((x+0.05)/5)*5-0.05);
+const ceil10=x=>round2(Math.ceil((x+0.05)/10)*10-0.05);
+
+/* ---- live pricing feed (reads the cw-pricing-data shape) ---- */
+let PRICING={cats:{},updated:null,ok:false,loading:true,error:null};
+async function loadPricing(){
+  try{
+    const parts=await Promise.all(PRICING_URLS.map(u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})));
+    const cats={}; let updated=null;
+    for(const d of parts){
+      if(d&&d._generated) updated=String(d._generated).slice(0,10);
+      for(const k of Object.keys(d||{})){ if(k[0]==='_') continue; if(d[k]&&d[k].models) cats[k]=d[k]; }
+    }
+    if(!Object.keys(cats).length) throw new Error('no categories');
+    PRICING={cats,updated,ok:true,loading:false,error:null};
+  }catch(e){ PRICING={cats:{},updated:null,ok:false,loading:false,error:e.message}; }
+}
+function poolCat(pool){ return PRICING.cats[String(pool||'').toLowerCase()]||null; }
+function modelsForPool(pool){ const c=poolCat(pool); return c?Object.keys(c.models):[]; }
+function modelRepairs(pool,model){ const c=poolCat(pool); const m=c&&c.models&&c.models[model]; return m?Object.keys(m):[]; }
+function modelPrice(pool,model,repair){ const c=poolCat(pool); const m=c&&c.models&&c.models[model]; const r=m&&m[repair]; return r?{price:Number(r.price),warranty:r.warranty||''}:null; }
+function classifyRepair(label){
+  const s=String(label).toLowerCase();
+  if(/batter/.test(s)) return 'battery';
+  if(/charg/.test(s)) return 'charging';
+  if(/back glass|housing|back cover/.test(s)) return 'backglass';
+  if(/hdmi/.test(s)) return 'hdmi';
+  if(/clean/.test(s)) return 'cleaning';
+  if(/screen|display/.test(s)) return 'screen';
+  return 'other';
+}
+
+function priceCalc(device,category,costIn,laborIn){
+  if(!device||!category||laborIn===''||laborIn==null) return null;
+  const cleaning=category==='Cleaning / Overheating';
+  if(costIn===''&&!cleaning) return null;
+  const Cost=costIn===''?0:Number(costIn), Labor=Number(laborIn);
+  if(isNaN(Cost)||isNaN(Labor)) return null;
+  const ScreenRaw=Cost<100?Cost*1.45:Cost<200?Cost*1.35:Cost<300?Cost*1.28:Cost*1.25;
+  const ScreenPart=ScreenRaw<32.5?29.95:ScreenRaw<36.5?34.95:R495(ScreenRaw);
+  const BatteryPart     =Math.max(29.95,ceil10(Cost<15?Cost*2.15:Cost<25?Cost*2:Cost<40?Cost*1.8:Cost<100?Cost*1.6:Cost*1.45));
+  const ChargingPortPart=Math.max(39.95,ceil10(Cost<15?Cost*2.75:Cost<30?Cost*2.35:Cost<60?Cost*2:Cost<100?Cost*1.65:Cost*1.5));
+  const HousingPart     =Math.max(49.95,ceil10(Cost<50?Cost*1.85:Cost<100?Cost*1.65:Cost<200?Cost*1.45:Cost<300?Cost*1.3:Cost*1.2));
+  const SmallPart       =Math.max(29.95,ceil10(Cost<10?Cost*3:Cost<25?Cost*2.5:Cost<50?Cost*2:Cost<100?Cost*1.6:Cost*1.45));
+  const ConsolePart     =Math.max(39.95,ceil10(Cost<25?Cost*2.5:Cost<75?Cost*2:Cost<150?Cost*1.5:Cost*1.3));
+  let part;
+  if(device==='Console'){ part=cleaning?0:ConsolePart; }
+  else{ part=({'Screen':ScreenPart,'Battery':BatteryPart,'Charging Port':ChargingPortPart,'Back Glass / Housing':HousingPart,'Other Small Parts':SmallPart})[category]??0; }
+  const Repair=part+Labor, t=Repair*1.07;
+  const shield=t<100?15.25:t<150?22.87:t<200?30.5:t<250?38.12:t<300?45.75:t<350?53.37:t<400?61:t<450?68.61:t<500?76.23:t<550?83.86:t<600?91.48:99.11;
+  const screenNC=category==='Screen'&&device!=='Console';
+  const customer=screenNC?R495(Repair+shield):ceil10(Repair);
+  let mra=null;
+  if(screenNC&&costIn!==''){ const sp=round2(Math.round(ScreenRaw/10)*10-0.05); mra=round2(Math.round((sp+Labor)/10)*10-0.05); }
+  return {customer,mra};
+}
+function coverageFor(device,cat){
+  if(cat==='Screen') return t('cov.screen',COV.screen);
+  if(cat==='Battery') return t('cov.battery',COV.battery);
+  if(cat==='Cleaning / Overheating') return t('cov.cleaning',COV.cleaning);
+  if(device==='Console') return t('cov.consoleHw',COV.consoleHw);
+  return t('cov.lifetime',COV.lifetime);
+}
+
+/* ---- render helpers ---- */
+function sayBlock(text,label){
+  const paras=text.split('\n\n').map(p=>`<p>${esc(p).replace('{price}','<span class="say-price">$xxx.xx</span>')}</p>`).join('');
+  return `<div class="say"><span class="lbl">${label||'Say to caller'}</span>${paras}</div>`;
+}
+function embedBlock(e){
+  const allow=e.allow?` allow="${esc(e.allow)}"`:'';
+  return `<div class="embed"><div class="embed-lbl">${esc(e.label||'Form')}</div>`
+    + `<iframe src="${esc(e.src)}"${allow} loading="lazy" style="border:0;width:100%;height:${e.height||900}px" title="${esc(e.label||'Form')}"></iframe>`
+    + `<a class="embed-open" href="${esc(e.src)}" target="_blank" rel="noopener">Open in a new tab \u2197</a></div>`;
+}
+function noteBlock(text,warn,label){
+  return `<div class="note ${warn?'warn':''}"><span class="nk">${esc(label||'Internal note')}</span>${esc(text)}</div>`;
+}
+function extrasBlock(extras){
+  return `<div class="sec-lbl">If it comes up</div>`+extras.map(e=>`<div class="acc"><button class="acc-head"><span class="acc-title">${esc(e.label)}</span><span class="acc-arr">${ic('<path d="M6 9l6 6 6-6"/>')}</span></button><div class="acc-body">${sayBlock(e.say)}${e.note?noteBlock(e.note):''}</div></div>`).join('');
+}
+function calcBlock(s){
+  const catPicker = s.categories ? `<label class="c-field"><span class="cl">Repair</span><select class="c-cat">${s.categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></label>` : '';
+  const costField = s.noCost ? '' : `<label class="c-field"><span class="cl">Part cost</span><input type="number" class="c-cost" placeholder="0.00" step="0.01" inputmode="decimal"></label>`;
+  return `<div class="calc" data-device="${esc(s.device)}" data-category="${esc(s.category||'')}">
+    <div class="calc-lbl">Manual price calculator${s.hint?` <span class="feed-tag warnfeed">${esc(s.hint)}</span>`:''}</div>
+    <div class="calc-inputs">${catPicker}${costField}<label class="c-field"><span class="cl">Labor</span><input type="number" class="c-labor" value="${s.labor}" step="1" inputmode="numeric"></label></div>
+    <div class="calc-out">
+      <div class="price-main">Customer price<b class="c-cust">$—<span class="plus">+ tax</span></b></div>
+      <div class="price-mra c-mra-wrap" style="display:none">Price for MRA<b class="c-mra">—</b></div>
+    </div></div>`;
+}
+function sectionBlock(s){
+  const body = calcBlock(s)
+    + (s.sayAfter ? sayBlock(s.sayAfter,'Say after price lookup') : (s.say ? sayBlock(s.say) : ''))
+    + (s.categories ? `<div class="cov"><span class="ck">Coverage</span><span class="c-cov">${esc(coverageFor(s.device,s.categories[0]))}</span></div>` : `<div class="cov"><span class="ck">Coverage</span>${esc(s.coverage)}</div>`);
+  return `<div class="acc"><button class="acc-head"><span class="acc-title">${esc(s.name)}</span><span class="acc-meta">${esc(s.turnaround)}</span><span class="acc-arr">${ic('<path d="M6 9l6 6 6-6"/>')}</span></button><div class="acc-body">${body}</div></div>`;
+}
+const SAY_TIMING = "We do offer priority service if you need the device looked at faster \u2014 it moves the device ahead in the queue for a quicker evaluation. Would that help your situation?";
+const SAY_PRICE = "I completely understand \u2014 no one really plans for a repair like this. We do have financing options available if that would make it easier. Would you like me to text you the application link?";
+const SAY_SHOPPING = "Totally makes sense \u2014 I'd do the same thing. We may not always be the cheapest option, but what sets us apart is the quality of the parts, the experience of our technicians, and the warranty that backs the repair.\n\nWe also take the time to inspect the device so you're not just fixing one thing and hoping nothing else is wrong.";
+
+function objectionBlock(){
+  return `<div class="obj-btns"><button class="obj-b" data-o="timing">Timing</button><button class="obj-b" data-o="price">Price</button><button class="obj-b" data-o="shopping">Shopping around</button></div>
+      <div class="reveal" data-orev="timing">${sayBlock(t('obj.timing',SAY_TIMING))}<div class="mini-note">${t('obj.priorityNote','Priority service \u2014 Computer $100 \u00B7 Phone / tablet $75 \u00B7 Console $75')}</div></div>
+      <div class="reveal" data-orev="price">${sayBlock(t('obj.price',SAY_PRICE))}<div class="mini-note">${t('obj.financeNote','Financing link is a reminder \u2014 no link wired in yet.')}</div></div>
+      <div class="reveal" data-orev="shopping">${sayBlock(t('obj.shopping',SAY_SHOPPING))}</div>`;
+}
+
+const SIGNOFF = "If you have any other questions or concerns along the way, don't hesitate to reach out. That's what we're here for.";
+function signoffBlock(withHeader){
+  const inner = sayBlock(t('close.signoff',SIGNOFF));
+  return withHeader
+    ? `<div class="closing"><div class="closing-h">Close the call</div>${inner}</div>`
+    : `<div class="signoff">${inner}</div>`;
+}
+
+const D_BEFORE = "Perfect! Before you head over, do you know where we're located?";
+const D_LOCNOTE = "If they're not sure, tap Info at the top and read them the nearest location.";
+const D_LOOKFWD = "Okay, great. We look forward to seeing you in the shop!";
+const D_OBJINTRO = "No problem at all. Is it the timing, the price, or are you still comparing options?";
+function computerCloseCards(){
+  return `${sayBlock(t('close.beforeLocated',D_BEFORE))}`
+    + `${noteBlock(t('close.locationNote',D_LOCNOTE))}`
+    + `${sayBlock(t('close.lookForward',D_LOOKFWD) + " " + t('close.signoff',SIGNOFF),"Then say")}`;
+}
+function computerObjections(){
+  return `<div class="closing"><div class="closing-h">Objections</div>
+    <p class="closing-sub">${t('obj.computerSub',"If they can't come in today, it's almost always timing.")}</p>
+    ${sayBlock(t('obj.timing',SAY_TIMING))}
+    <div class="mini-note">${t('obj.computerPriorityNote','Computer priority service \u2014 $100')}</div>
+  </div>`;
+}
+
+function deviceObjections(){
+  return `<div class="closing"><div class="closing-h">Objections</div>
+    <p class="closing-sub">${t('obj.deviceSub',"If they can't come in today, it's usually timing, price, or still shopping.")}</p>
+    ${sayBlock(t('obj.intro',D_OBJINTRO))}
+    ${objectionBlock()}
+  </div>`;
+}
+function closingBlock(objectionsOnly){
+  if(objectionsOnly){
+    return `<div class="closing"><div class="closing-h">Close the call</div>
+      ${sayBlock("Perfect! Before you head over, do you know where we're located?")}
+      ${noteBlock("If they're not sure, tap Info at the top and read them the nearest location.")}
+      ${sayBlock("Okay, great. We look forward to seeing you in the shop! " + SIGNOFF,"Then say")}
+    </div>
+    <div class="closing"><div class="closing-h">Objections</div>
+      <p class="closing-sub">If they can't come in today, it's almost always timing.</p>
+      ${sayBlock(SAY_TIMING)}
+      <div class="mini-note">Computer priority service \u2014 <b>$100</b></div>
+    </div>`;
+  }
+  return `<div class="closing"><div class="closing-h">Close the call</div>
+    <div class="obj-btns"><button class="obj-b" data-r="yes">They can come in</button><button class="obj-b" data-r="no">Not today</button></div>
+    <div class="reveal" data-rev="yes">${sayBlock("Perfect! Before you head over, do you know where we're located?")}${noteBlock("If they're not sure, tap Info at the top and read them the nearest location.")}${sayBlock("Okay, great. We look forward to seeing you in the shop!","Then say")}</div>
+    <div class="reveal" data-rev="no">
+      ${sayBlock("No problem at all. Is it the timing, the price, or are you still comparing options?")}
+      ${objectionBlock()}
+    </div>
+    ${signoffBlock(false)}
+    </div>`;
+}
+
+function checklistBlock(items){
+  return '';   // end-of-call checklist removed per request
+}
+function choicesBlock(choices){
+  return `<div class="choices">`+choices.map((ch,i)=>`<button class="choice" data-choice="${i}"><span class="lab">${esc(ch.label)}${ch.sub?`<small>${esc(ch.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('')+`</div>`;
+}
+
+/* ---- screens ---- */
+function goHome(){ state=null; history=[]; renderHome(); }
+
+/* =========================================================================
+   DEVICE REPAIR — brand -> device -> repair -> wiki price + script
+   Prices come straight from the RepairShopr-wiki feed. The manual markup
+   calculator only appears as a fallback (Other device / model or repair not
+   listed in the wiki).
+   ========================================================================= */
+const DEVICE_META = { label:"Phone, iPad & Console Repair", color:"#E28313", tintSoft:"#FCEBD3",
+  desc:"iPhone, Samsung, Pixel, iPad, console, or other device.",
+  icon:'<rect x="3" y="4" width="12" height="9" rx="1.5"/><path d="M6 20h6M9 16v4"/><rect x="16" y="9" width="6" height="11" rx="1.4"/>' };
+
+const DEVICE_BRANDS = [
+  { id:"apple",   label:"iPhone",       noun:"iPhone",  pool:"iPhone",  family:"phone",   stock:"stocked", color:"#3A6EA5", prompt:"What model iPhone do you have, and what's going on with it?" },
+  { id:"samsung", label:"Samsung",      noun:"Samsung", pool:"Samsung", family:"phone",   stock:"order",   color:"#1B4DB1", prompt:"What model Samsung do you have, and what's going on with it?" },
+  { id:"pixel",   label:"Pixel",        noun:"Pixel",   pool:"Pixel",   family:"phone",   stock:"order",   color:"#1E8E7E", prompt:"What model Pixel do you have, and what's going on with it?" },
+  { id:"ipad",    label:"iPad",         noun:"iPad",    pool:"iPad",    family:"tablet",  stock:"queue",   color:"#7A4FBF", prompt:"What model iPad do you have, and what's going on with it?" },
+  { id:"console", label:"Game Console", noun:"console", pool:"Console", family:"console", stock:"queue",   color:"#1F7A55", prompt:"Which console is it, and what's it doing?" },
+  { id:"other",   label:"Other Device", noun:"device",  pool:null,      family:"phone",   stock:"order",   color:"#5A6472", prompt:"What kind of device is it, and what's going on with it?" }
+];
+const BRAND_BY_ID = Object.fromEntries(DEVICE_BRANDS.map(b=>[b.id,b]));
+
+const DEVICE_FAMILY = {
+  phone:   { device:"Phone",   labor:80,  repairs:["Screen","Battery","Charging Port","Back Glass / Housing","Other / Not Sure"] },
+  tablet:  { device:"Tablet",  labor:110, repairs:["Screen","Battery","Charging Port","Other / Not Sure"] },
+  console: { device:"Console", labor:100, repairs:["HDMI / Display","Cleaning / Maintenance","Other / Not Sure"] }
+};
+
+function turnLine(b){
+  if(b.family==="tablet")  return "Most iPads are worked out of a queue, so turnaround is usually around 2 to 3 days.";
+  if(b.family==="console") return "Consoles are worked out of a queue, so turnaround is usually around 2 to 3 days.";
+  return b.stock==="stocked"
+    ? "If we have the part in stock, the repair usually takes about 30 to 45 minutes."
+    : "Depending on the model we may have the part in stock or need to order it; once it's in, most repairs take about 30 to 45 minutes.";
+}
+function turnMeta(b, model, cls){
+  const t=deviceTier(b, model, cls);
+  if(t==="3a"||t==="3b") return "2-3 day queue";
+  if(cls==="backglass"||cls==="charging") return "Next day \u00b7 $50 deposit to order";
+  if(t==="1") return "Same day \u00b7 ~30-45 min in stock";
+  return cls==="battery" ? "A couple days \u00b7 $50 deposit to order" : "Next day \u00b7 $50 deposit to order";
+}
+
+function partWord(cls){ return cls==="screen"?"screen":cls==="battery"?"battery":"part"; }
+
+function deviceTier(b, model, cls){
+  if(b.family==="console") return "3b";
+  if(b.family==="tablet")  return "3a";
+  if(b.id==="apple") return "1";
+  if(b.id==="samsung" && cls==="screen" && /ultra/i.test(String(model||""))) return "1";
+  return "2";
+}
+
+function benefitLine(cls, noun){
+  if(cls==="screen")    return t('benefit.screen', "That screen repair comes with a lifetime warranty against part defects, plus one free screen replacement within the first 12 months \u2014 so if it breaks again during that first year, you're not paying for another screen.");
+  if(cls==="battery")   return t('benefit.battery', "That battery replacement comes with a one-year warranty against part defects.");
+  if(cls==="charging")  return t('benefit.charging', "That charging port repair comes with a lifetime warranty against part defects.");
+  if(cls==="backglass") return t('benefit.backglass', "That back glass repair comes with a lifetime warranty against part defects.");
+  if(cls==="hdmi")      return t('benefit.hdmi', "That HDMI repair comes with a one-year warranty against part defects.");
+  if(cls==="cleaning")  return t('benefit.cleaning', "Since we're only cleaning and servicing \u2014 not installing a part \u2014 there's no replacement-part warranty.");
+  return t('benefit.other', "That repair comes with a lifetime warranty against part defects.");
+}
+
+/* Device-specific closing ask. `family` is phone/tablet/console; `other` = the
+   Other Device / manual calculator (device family known, stock status unknown). */
+function closingAsk(tier, cls, family, other){
+  if(family==="console") return t('ask.console', "Would you like to bring the console in today, or schedule a time to drop it off?");
+  if(family==="tablet")  return t('ask.tablet', "Would you like to bring it in today, or schedule a time to drop it off?");
+  if(other)              return t('ask.phoneOther', "Would you like to bring it in today, or schedule a time to come in?");
+  const inStock = tier==="1" && (cls==="screen"||cls==="battery"||cls==="other");
+  return inStock
+    ? t('ask.phoneInStock', "Would you like to bring it in today, or schedule a time to have the repair completed?")
+    : t('ask.phoneOrder', "Would you like to stop by today so we can confirm the exact model and get the part ordered, or schedule a time to come in?");
+}
+
+function tierScript(tier, cls, noun, family, other){
+  let benefit;
+  if(tier==="3b"){
+    benefit = cls==="cleaning" ? benefitLine("cleaning",noun)
+            : cls==="screen"   ? benefitLine("screen","console")
+            : t('benefit.console', "That console repair comes with a lifetime warranty against part defects.");
+  } else {
+    benefit = benefitLine(cls, noun);
+  }
+  const Noun = noun.charAt(0).toUpperCase()+noun.slice(1), Nouns = noun==="iPad"?"iPads":Noun+"s";
+  let turn;
+  if(cls==="backglass") turn = t('turn.backglass', "Back glass isn't something we keep in stock, so we'll order it in \u2014 it ships overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.");
+  else if(cls==="charging" && (tier==="1"||tier==="2")) turn = t('turn.charging', "Charging ports aren't something we keep in stock, so we'll order the port in \u2014 it ships overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.");
+  else if(tier==="1")  turn = cls==="screen"
+                           ? t('turn.instockScreen', "We keep those screens in stock, so we'll have it done in about 30 to 45 minutes.")
+                           : cls==="battery"
+                           ? t('turn.instockBattery', "We keep those batteries in stock, so we'll have it done in about 30 to 45 minutes.")
+                           : t('turn.instockOther', "If we've got the part in stock, we'll have it done in about 30 to 45 minutes.");
+  else if(tier==="2")  turn = cls==="battery"
+                           ? t('turn.tier2Battery', "Since it's a {noun}, we'll check it in to confirm the exact model and order the battery \u2014 we can't overnight batteries, so it's usually a couple of business days. There's a fifty-dollar deposit to order the part, and that goes toward the repair.")
+                           : t('turn.tier2Other', "Since it's a {noun}, we'll check it in to confirm the exact model and order the {part} \u2014 it comes in overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.");
+  else if(tier==="3a") turn = t('turn.queueTablet', "{Nouns} go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.");
+  else                 turn = t('turn.queueConsole', "Consoles go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.");
+  turn = turn.replace(/\{noun\}/g, noun).replace(/\{part\}/g, partWord(cls)).replace(/\{Nouns\}/g, Nouns).replace(/\{Noun\}/g, Noun);
+  return `${benefit} ${turn} ${t('priceLine',"It's only {price} plus tax.")}\n\n${closingAsk(tier,cls,family,other)}`;
+}
+
+function sayAfterFor(cls,noun,turn,label,warranty){
+  if(cls==="screen")   return `For that ${noun} screen repair, the price is {price} plus tax.\n\n${turn}\n\nThat screen repair comes with a lifetime warranty against part-defect issues, and it also includes one free screen re-repair within 12 months \u2014 so if the screen breaks again during that first year, you don't pay for another screen repair.`;
+  if(cls==="battery")  return `For that ${noun} battery replacement, the price is {price} plus tax.\n\n${turn}\n\nBattery repairs come with a 1-year warranty against part-defect issues.`;
+  if(cls==="charging") return `For that ${noun} charging port repair, the price is {price} plus tax.\n\n${turn}\n\nThat repair comes with a lifetime warranty against part-defect issues \u2014 that covers the replacement part itself, not new physical damage, liquid damage, or misuse.`;
+  if(cls==="backglass")return `For that ${noun} back glass repair, the price is {price} plus tax.\n\n${turn}\n\nThat repair comes with a lifetime warranty against part-defect issues \u2014 that covers the replacement part itself, not new physical damage, liquid damage, or misuse.`;
+  if(cls==="hdmi")     return `For that HDMI repair, the price is {price} plus tax.\n\n${turn}\n\nIf we replace the HDMI port, that repair comes with a 1-year warranty against part-defect issues \u2014 that doesn't cover physical damage, liquid damage, or misuse.`;
+  if(cls==="cleaning") return `For that full cleaning and maintenance service, the price is {price} plus tax.\n\n${turn}\n\nSince we're only cleaning and servicing \u2014 not installing a part \u2014 there's no replacement-part warranty. If we find something needs replacing, we'll explain the option and warranty before moving forward.`;
+  const w=String(warranty||"").toLowerCase();
+  const art=/lifetime/.test(w)?"a lifetime":/1[\s-]?year/.test(w)?"a 1-year":"a part-defect";
+  return `For that ${String(label).toLowerCase()} on your ${noun}, the price is {price} plus tax.\n\n${turn}\n\nThat repair comes with ${art} warranty against part-defect issues.`;
+}
+function coverageTextFor(cls,warranty){
+  if(cls==="screen")   return COV.screen;
+  if(cls==="battery")  return COV.battery;
+  if(cls==="charging"||cls==="backglass") return COV.lifetime;
+  if(cls==="hdmi")     return COV.consoleHw;
+  if(cls==="cleaning") return COV.cleaning;
+  return warranty||COV.lifetime;
+}
+function calcCategoryFor(cls){
+  return {screen:"Screen",battery:"Battery",charging:"Charging Port",backglass:"Back Glass / Housing",hdmi:"HDMI / Display",cleaning:"Cleaning / Overheating"}[cls]||"Other Small Parts";
+}
+
+/* ---- navigation ---- */
+let drStack=[];
+function startDevice(){ state={mode:"device",actions:new Set()}; drStack=[]; renderDevice({stage:"brand"}); }
+function drGo(next){ drStack.push(state.dr); renderDevice(next); }
+function drBack(){ if(drStack.length){ renderDevice(drStack.pop()); } else goHome(); }
+function drChrome(accent,crumb,total,idx){
+  return `<div class="flowbar"><button class="back" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button>`
+    + `<span class="flowtag"><span class="dot" style="background:${accent}"></span>${esc(crumb)}</span>`
+    + (total?`<span class="steptrack">Step ${idx} / ${total}</span>`:'') + `</div>`;
+}
+function renderDevice(dr){
+  state.dr=dr;
+  if(dr.stage==="brand")  return renderBrand();
+  if(dr.stage==="model")  return renderModel();
+  if(dr.stage==="repair") return renderRepair();
+  if(dr.stage==="result") return renderResult();
+}
+
+function renderBrand(){
+  const rows=DEVICE_BRANDS.map(b=>`<button class="choice" data-b="${b.id}"><span class="lab">${esc(b.label)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
+  const right=`<div class="choices">${rows}</div>`;
+  stage.innerHTML=screen({flowbar:drChrome(DEVICE_META.color,"Phone, iPad & Console",4,1),accent:DEVICE_META.color,title:"What are we working on?",sub:"Pick the brand or device family.",right});
+  document.getElementById('drBack').onclick=drBack;
+  stage.querySelectorAll('[data-b]').forEach(btn=>btn.onclick=()=>{
+    const b=BRAND_BY_ID[btn.dataset.b];
+    if(b.pool) drGo({stage:"model",brandId:b.id});
+    else drGo({stage:"result",brandId:b.id,model:null,repairType:"__other"});
+  });
+}
+
+function renderModel(){
+  const b=BRAND_BY_ID[state.dr.brandId];
+  const list=modelsForPool(b.pool);
+  const contBtn=`<button class="choice" data-m=""><span class="lab">Continue \u2014 price it by hand</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
+  let right, feedNote='', search='';
+  if(PRICING.loading){
+    right=noteBlock("Loading current prices from the wiki\u2026")+`<div class="choices">${contBtn}</div>`;
+  } else if(list.length){
+    feedNote='';
+    if(list.length>6) search=`<div class="model-search"><span class="ms-ic">${ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')}</span><input type="text" id="modelSearch" placeholder="Search ${esc(b.label)} models\u2026" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`;
+    const rows=list.map(m=>`<button class="choice" data-m="${esc(m)}" data-name="${esc(m.toLowerCase())}"><span class="lab">${esc(m)}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
+    right=`${feedNote}${search}<div class="choices scroll-list" id="modelList">${rows}<div class="no-match" id="noMatch" style="display:none">No match \u2014 check the spelling, or go back and choose \u201COther Device.\u201D</div></div>`;
+  } else {
+    right=noteBlock(PRICING.ok?"No models listed for this brand yet \u2014 continue and price it by hand.":"Pricing feed unavailable \u2014 continue and price it by hand.","warn")+`<div class="choices">${contBtn}</div>`;
+  }
+  stage.innerHTML=screen({flowbar:drChrome(b.color,b.label,4,2),accent:b.color,title:`${esc(b.label)} \u2014 which device?`,right});
+  document.getElementById('drBack').onclick=drBack;
+  stage.querySelectorAll('[data-m]').forEach(btn=>btn.onclick=()=>drGo({stage:"repair",brandId:b.id,model:btn.dataset.m||null}));
+  const sb=document.getElementById('modelSearch');
+  if(sb){
+    const listEl=document.getElementById('modelList'), noMatch=document.getElementById('noMatch');
+    const filter=()=>{
+      const q=sb.value.trim().toLowerCase(); let shown=0;
+      listEl.querySelectorAll('[data-name]').forEach(el=>{
+        if(el.classList.contains('model-other')) return;
+        const hit=!q||el.dataset.name.indexOf(q)!==-1;
+        el.style.display=hit?'':'none'; if(hit)shown++;
+      });
+      noMatch.style.display=shown?'none':'';
+    };
+    sb.addEventListener('input',filter);
+    setTimeout(()=>sb.focus(),40);
+  }
+}
+
+function renderRepair(){
+  const b=BRAND_BY_ID[state.dr.brandId], fam=DEVICE_FAMILY[b.family], model=state.dr.model;
+  const wikiRepairs = model ? modelRepairs(b.pool,model) : [];
+  let opts=[];
+  if(wikiRepairs.length){
+    opts = wikiRepairs.map(r=>({label:r,rt:r}));
+    if(b.family==="console") opts.push({label:"Full Cleaning / Maintenance",sub:"Flat $100 \u00B7 excludes Switch",rt:"__cleaning"});
+  } else {
+    opts = fam.repairs.filter(r=> r!=="Other / Not Sure").map(r=> ({label:r,rt:r,manual:true}));
+    if(b.family==="console") opts.splice(opts.length-1,0,{label:"Full Cleaning / Maintenance",sub:"Flat $100 \u00B7 excludes Switch",rt:"__cleaning"});
+  }
+  const rows=opts.map((o,i)=>`<button class="choice" data-i="${i}"><span class="lab">${esc(o.label)}${o.sub?`<small>${esc(o.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('');
+  const who=model?esc(model):esc(b.label);
+  stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,3),accent:b.color,title:`${who} \u2014 what's the repair?`,right:`<div class="choices">${rows}</div>`});
+  document.getElementById('drBack').onclick=drBack;
+  stage.querySelectorAll('[data-i]').forEach(btn=>btn.onclick=()=>drGo({stage:"result",brandId:b.id,model:model,repairType:opts[+btn.dataset.i].rt}));
+}
+
+function renderResult(){
+  const b=BRAND_BY_ID[state.dr.brandId], fam=DEVICE_FAMILY[b.family], model=state.dr.model, rt=state.dr.repairType;
+  const noun=b.noun;
+
+  let feed=null, cls, repairLabel;
+  if(rt==="__cleaning"){ feed={price:100,warranty:"Service only \u2014 no part warranty"}; cls="cleaning"; repairLabel="Full Cleaning / Maintenance"; }
+  else if(rt==="__other"){ cls="other"; repairLabel="Other / Not Sure"; }
+  else { repairLabel=rt; cls=classifyRepair(rt); if(model) feed=modelPrice(b.pool,model,rt); }
+
+  const tier=deviceTier(b, model, cls);
+  const who=model?esc(model):esc(b.label);
+  const sub=`<div class="result-meta"><span>${esc(repairLabel)}</span><span class="dotsep">\u00B7</span><span>${esc(turnMeta(b,model,cls))}</span></div>`;
+
+  // LEFT = what to say (warranty + turnaround + price + ask, all in one script)
+  let left='';
+  if(feed){
+    left=sayBlock(tierScript(tier,cls,noun,b.family),"Say to caller");
+  } else if(rt==="__other"){
+    const CATS=["Screen","Battery","Charging Port","Back Glass / Housing","Other Small Parts"];
+    const defDev = b.family==="tablet"?"Tablet":b.family==="console"?"Console":"Phone";
+    const devOpts=["Phone","Tablet","Console"].map(d=>`<option${d===defDev?" selected":""}>${d}</option>`).join("");
+    const catOpts=CATS.map(c=>`<option>${esc(c)}</option>`).join("");
+    left = `<div class="odc-inputs">`
+      + `<label class="c-field"><span class="cl">Device type</span><select class="od-device">${devOpts}</select></label>`
+      + `<label class="c-field"><span class="cl">Repair category</span><select class="od-cat">${catOpts}</select></label>`
+      + `<label class="c-field"><span class="cl">Part cost</span><input type="number" class="od-cost" placeholder="0.00" step="0.01" inputmode="decimal"></label>`
+      + `</div><div class="od-script"></div>`;
+  } else {
+    const cat=calcCategoryFor(cls);
+    left=calcBlock({device:fam.device,labor:fam.labor,category:cat,noCost:cls==="cleaning",hint:"not in wiki"})
+      + sayBlock(tierScript(tier,cls,noun,b.family),"Say after price lookup");
+  }
+
+  // Appointment shortcut sits at the bottom of the left script pane, just above Objections
+  left += apptCtaLeft();
+
+  // RIGHT = close the call cards; Objections full-width below — same layout as the computer flow
+  const right=(rt==="__other"?partsLookupBlock():"")+computerCloseCards();
+  const full=deviceObjections();
+
+  const footer=`<button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
+  stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,4),accent:b.color,title:who,sub,left,right,full,footer});
+
+  stage.querySelectorAll('#drBack').forEach(x=>x.onclick=drBack);
+  document.getElementById('drFinish').onclick=goHome;
+  stage.querySelectorAll('.calc').forEach(setupCalc);
+  if(feed){ const sp=stage.querySelector('.say-price'); if(sp) sp.textContent=money(feed.price); }
+  if(rt==="__other"){
+    _odPart = { brand:"", model:"" };   // reset per Other Device screen
+    const dev=stage.querySelector('.od-device'), catx=stage.querySelector('.od-cat'), costx=stage.querySelector('.od-cost');
+    const scriptBox=stage.querySelector('.od-script'), metaBox=stage.querySelector('.result-meta');
+    const clsOf=c=>({Screen:"screen",Battery:"battery","Charging Port":"charging","Back Glass / Housing":"backglass"})[c]||"other";
+    const tierOf=d=>d==="Tablet"?"3a":d==="Console"?"3b":"2";
+    const metaOf=(d,cls)=>{ if(d==="Tablet"||d==="Console") return "2-3 day queue"; if(cls==="backglass"||cls==="charging") return "Next day \u00b7 $50 deposit to order"; return cls==="battery"?"A couple days \u00b7 $50 deposit to order":"Next day \u00b7 $50 deposit to order"; };
+    function odRun(){
+      const d=dev.value, c=catx.value, cls=clsOf(c);
+      scriptBox.innerHTML=sayBlock(tierScript(tierOf(d),cls,d.toLowerCase(),d.toLowerCase(),true),"Say to caller");
+      const r=priceCalc(d,c,costx.value===""?"":costx.value,LABOR[d]);
+      const sp=scriptBox.querySelector('.say-price'); if(sp) sp.textContent=r?money(r.customer):"$xxx.xx";
+      if(metaBox) metaBox.innerHTML=`<span>${esc(c)}</span><span class="dotsep">\u00B7</span><span>${esc(metaOf(d,cls))}</span>`;
+      fitToViewport();
+    }
+    [dev,catx,costx].forEach(x=>{ x.addEventListener("input",odRun); x.addEventListener("change",odRun); });
+    odRun();
+  }
+  wireClosing(); wireChecklist();
+
+  // Appointment link: phones -> Phone Repair type; iPad/console -> Repair Queue.
+  // Pre-fill pulls brand/model/repair/price straight from this screen.
+  let getApptUrl;
+  if(rt==="__other"){
+    getApptUrl=()=>{
+      const d=(stage.querySelector('.od-device')||{}).value||"Phone";
+      const c=(stage.querySelector('.od-cat')||{}).value||"";
+      const base=d==="Phone"?APPT_LINKS.phone:APPT_LINKS.queue;
+      return apptUrl(base,{brand:_odPart.brand||"",model:_odPart.model||"",repair:c,price:currentApptPrice()});
+    };
+  } else {
+    const base=(b.family==="tablet"||b.family==="console")?APPT_LINKS.queue:APPT_LINKS.phone;
+    getApptUrl=()=>apptUrl(base,{brand:b.label,model:model||"",repair:repairLabel,price:currentApptPrice()});
+  }
+  wireApptButtons(()=>renderDevice(state.dr), getApptUrl);
+  wirePartsLookup();
+}
+
+function wireClosing(){
+  stage.querySelectorAll('[data-r]').forEach(bn=>bn.onclick=()=>{
+    stage.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x===bn));
+    stage.querySelectorAll('[data-rev]').forEach(r=>r.classList.toggle('show',r.dataset.rev===bn.dataset.r));
+  });
+  stage.querySelectorAll('[data-o]').forEach(bn=>bn.onclick=()=>{
+    const was=bn.classList.contains('on');
+    stage.querySelectorAll('[data-o]').forEach(x=>x.classList.remove('on'));
+    stage.querySelectorAll('[data-orev]').forEach(r=>r.classList.remove('show'));
+    if(!was){ bn.classList.add('on'); const t=stage.querySelector(`[data-orev="${bn.dataset.o}"]`); if(t) t.classList.add('show'); }
+  });
+}
+function wireChecklist(){
+  stage.querySelectorAll('.act').forEach(bn=>bn.onclick=()=>{
+    const a=bn.dataset.act;
+    if(state.actions.has(a)) state.actions.delete(a); else state.actions.add(a);
+    bn.classList.toggle('on');
+  });
+}
+
+
+function screen(o){
+  const left=o.left||'', right=o.right||'';
+  const split = left
+    ? `<div class="split"><div class="pane pane-script">${left}</div><div class="pane pane-choices">${right}</div></div>`
+    : `<div class="split solo"><div class="pane pane-choices">${right}</div></div>`;
+  let h=(o.flowbar||'');
+  h+=`<div class="panel${o.home?' greet-home':''}" style="--flow:${o.accent||'var(--accent)'};--flow-soft:${o.accentSoft||'#EEF0F4'}">`;
+  h+=`<div class="panel-head">`;
+  if(o.eyebrow) h+=`<div class="eyebrow">${esc(o.eyebrow)}</div>`;
+  if(o.title) h+=`<h2 class="step-title">${o.title}</h2>`;
+  if(o.sub) h+=`<div class="step-sub">${o.sub}</div>`;
+  h+=`</div>`+split;
+  if(o.full) h+=`<div class="fullrow">${o.full}</div>`;
+  if(o.footer) h+=`<div class="footer-nav">${o.footer}</div>`;
+  h+=`</div>`;
+  return h;
+}
+
+function renderHome(){
+  const tile=(id,f,isDevice)=>`<button class="tile" data-${isDevice?'device':'flow'}="${id}" style="--tint:${f.color||f.tint};--tint-soft:${f.tintSoft||'#EEF0F4'}"><span class="ic">${ic(f.icon)}</span><span class="txt"><h3>${esc(f.label)}</h3><p>${esc(f.desc)}</p></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
+  const tiles=[tile('computer',FLOWS.computer,false),tile('device',DEVICE_META,true),tile('support',FLOWS.support,false)].join('');
+  const left=sayBlock(t('greeting.hello',"Thanks for calling Computer Warriors, this is [name]. Who do I have the pleasure of speaking with?"))
+    + noteBlock(t('greeting.note1',"Get the customer's name and use it naturally during the call."))
+    + sayBlock(t('greeting.help',"Hey [name], how can we help you today?"),"Then say")
+    + noteBlock(t('greeting.note2',"Ask about the device type, the issue, or whether they need remote / onsite help."));
+  const right=`<div class="pane-title">What's the call about?</div><div class="pane-sub">Pick the closest match \u2014 switch anytime with Home.</div><div class="tiles">${tiles}</div>`;
+  stage.innerHTML=screen({home:true,accent:'var(--accent)',eyebrow:"Every call starts here",title:"Greet the caller",left,right});
+  stage.querySelectorAll('.tile').forEach(t=>t.onclick=()=> t.dataset.device ? startDevice() : startFlow(t.dataset.flow));
+}
+
+function renderInfo(){
+  const loc=l=>`<div class="note"><span class="nk">${esc(l.name)}</span><b>${esc(l.addr)}</b>${l.near?`<span class="near">${esc(l.near)}</span>`:''}${l.phone?`<span class="near">${esc(l.phone)}</span>`:''}</div>`;
+  const row=(t,d)=>`<li><span class="ct">${esc(t)}</span><span>${esc(d)}</span></li>`;
+  stage.innerHTML=`
+    <div class="flowbar"><button class="back" id="backBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag">Quick info</span></div>
+    <div class="panel"><div class="panel-body">
+      <div class="eyebrow">Hours &amp; locations</div>
+      <h2 class="step-title">${esc(t('shop.hours',SHOP.hours))}</h2>
+      <p class="step-sub">Walk-ins welcome — or book a set time below.</p>
+      ${loc({name:t('shop.wilmingtonName',SHOP.wilmington.name),addr:t('shop.wilmingtonAddr',SHOP.wilmington.addr),near:t('shop.wilmingtonNear',SHOP.wilmington.near)})}${loc({name:t('shop.jacksonvilleName',SHOP.jacksonville.name),addr:t('shop.jacksonvilleAddr',SHOP.jacksonville.addr),near:t('shop.jacksonvilleNear',SHOP.jacksonville.near)})}
+      <div class="appt-cta">
+        <button class="btn-primary" id="apptBtn">${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')} Book an in-store appointment</button>
+        <span class="hint">Opens the online scheduler — great for a customer who wants a set drop-off time.</span>
+      </div>
+    </div></div>`;
+  document.getElementById('backBtn').onclick=()=>{
+    if(!state) renderHome();
+    else if(state.mode==="device" && state.dr) renderDevice(state.dr);
+    else renderStep();
+  };
+  document.getElementById('apptBtn').onclick=()=>renderAppointments(renderInfo, APPT_LINKS.general);
+}
+
+/* =========================================================================
+   APPOINTMENTS — in-store scheduling (Acuity embed)
+   Fixed-height iframe, same convention as the Cognito / SOHO forms
+   (auto-resize embed.js intentionally omitted — an injected <script>
+   tag doesn't execute via innerHTML anyway, and the iframe stands alone).
+
+   The Info page opens the general scheduler (all categories). Each closing
+   screen opens the matching category and pre-fills the intake form with the
+   details already on screen (brand, model, repair, quoted price).
+   ========================================================================= */
+const ACUITY_BASE = "https://app.acuityscheduling.com/schedule.php?owner=39782661";
+
+// Category / type deep-links (exactly as provided by Acuity)
+const APPT_LINKS = {
+  general:  ACUITY_BASE + "&ref=embedded_csp",
+  computer: ACUITY_BASE + "&appointmentType=category:Computer%20Repair%20Drop-Off%20%E2%80%94%20Laptop%2C%20Desktop%20%26%20Mac",
+  queue:    ACUITY_BASE + "&appointmentType=category:iPad%20%26%20Game%20Console%20Drop-Off%20%E2%80%94%20Repair%20Queue",
+  phone:    ACUITY_BASE + "&appointmentType=95474814"
+};
+
+/* Acuity intake-form field IDs for pre-fill. Acuity pre-fills a custom
+   question with  &field:<ID>=<value>  — the <ID> is the numeric field id
+   from your intake form. FILL THESE IN and pre-fill turns on automatically;
+   leave one blank and that field is simply skipped. If the phone form and the
+   iPad/console form use DIFFERENT questions, we can split these per category. */
+// Acuity form "Repair Booking Details" (id 3321222) — shared by the Phone and
+// iPad/Console appointment types, so one set of IDs covers both.
+const ACUITY_FIELDS = { brand:18807792, model:18807793, repair:18807794, price:18807795 };
+
+function apptUrl(base, prefill){
+  let url=base;
+  if(prefill){
+    for(const key of Object.keys(ACUITY_FIELDS)){
+      const id=ACUITY_FIELDS[key], val=prefill[key];
+      if(id && val!=null && val!=="") url += "&field:"+id+"="+encodeURIComponent(val);
+    }
+  }
+  return url;
+}
+// Read the price currently shown in the script (skips the "$xxx.xx" placeholder)
+function currentApptPrice(){
+  const sp=stage.querySelector('.say-price');
+  const t=sp?sp.textContent.trim():'';
+  return /\$\s*\d/.test(t) ? t.replace(/\s+/g,'') : '';
+}
+
+// `back` re-renders whatever screen we came from, so a tech mid-call returns to
+// the exact result/step. `url` is the category link (defaults to general).
+function renderAppointments(back, url){
+  const ret = typeof back==="function" ? back : renderInfo;
+  const src = url || APPT_LINKS.general;
+  stage.innerHTML=`
+    <div class="flowbar"><button class="back" id="apptBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag"><span class="dot" style="background:var(--accent)"></span>Appointments</span></div>
+    <div class="panel" style="--flow:var(--accent)"><div class="panel-body">
+      <div class="eyebrow">In-store appointment</div>
+      <h2 class="step-title">Schedule a time to come in</h2>
+      <p class="step-sub">Pick a slot below. Walk-ins are always welcome too — this just holds a set time.</p>
+      ${embedBlock({ label:"In-store appointment scheduling", src, height:800, allow:"payment" })}
+    </div></div>`;
+  document.getElementById('apptBack').onclick=ret;
+}
+
+// Small "Schedule an appointment" button placed at the bottom of the left
+// script pane (just above the Objections section) on every closing screen.
+/* =========================================================================
+   PARTS LOOKUP — Other Device only. The tech types the part (e.g. "iPhone 12
+   screen"); the app asks its own /api/parts endpoint, which queries the
+   MobileSentrix REST API and returns matches. Tapping a result drops the price
+   into "Part cost" (quote fills in) AND auto-sets the device type + repair
+   category, and captures the brand + model for the appointment booking details.
+   The store buttons are a manual fallback — they open the supplier's pre-filled
+   search docked beside the console (suppliers block being embedded, so we open,
+   not iframe). PhoneLCDParts stays a link until its API is ready.
+   ========================================================================= */
+const PARTS_SUPPLIERS = [
+  { name:"MobileSentrix",  base:"https://www.mobilesentrix.com" },
+  { name:"PhoneLCDParts",  base:"https://www.phonelcdparts.com" }
+];
+// Set when a part is picked, so the appointment prefill (and booking details)
+// can carry the device brand + model inferred from the part name.
+let _odPart = { brand:"", model:"" };
+// Infer device type, repair category, brand and model from a part title.
+function partInfo(name){
+  const s = String(name), t = s.toLowerCase();
+  let device = "Phone";
+  if(/\bipad\b|galaxy tab|\btab\b|tablet|surface/.test(t)) device="Tablet";
+  else if(/ps5|ps4|ps3|playstation|xbox|nintendo|\bswitch\b|console|joy-?con|controller|joystick|steam deck/.test(t)) device="Console";
+  let cat = "Other Small Parts";
+  if(/batter/.test(t)) cat="Battery";
+  else if(/charg|dock connector|dock port/.test(t)) cat="Charging Port";
+  else if(/screen|lcd|oled|amoled|display|digitizer|touch/.test(t)) cat="Screen";
+  else if(/back glass|rear glass|back cover|battery cover|housing/.test(t)) cat="Back Glass / Housing";
+  let brand = "";
+  if(/iphone|ipad|apple|macbook|ipod/.test(t)) brand="Apple";
+  else if(/samsung|galaxy/.test(t)) brand="Samsung";
+  else if(/pixel|google/.test(t)) brand="Google";
+  else if(/motorola|moto\b/.test(t)) brand="Motorola";
+  else if(/oneplus/.test(t)) brand="OnePlus";
+  else if(/\blg\b/.test(t)) brand="LG";
+  else if(/playstation|ps5|ps4|ps3/.test(t)) brand="Sony";
+  else if(/xbox/.test(t)) brand="Microsoft";
+  else if(/nintendo|\bswitch\b/.test(t)) brand="Nintendo";
+  // model — supplier names are usually "<part> For <device model> (<quality>)",
+  // so prefer the text after "For"; otherwise take the portion before the
+  // repair/part keyword. Then drop the trailing "(...)" quality note.
+  let model = "";
+  const forMatch = s.match(/\bfor\s+(.+)/i);
+  if(forMatch){
+    model = forMatch[1];
+  } else {
+    const cut = s.search(/\b(lcd|oled|amoled|screen|display|digitizer|battery|charging|charge\s*port|back\s*glass|rear\s*glass|back\s*cover|housing|assembly|flex|camera|speaker|earpiece|button|frame|adhesive|glass|lens|replacement|compatible)\b/i);
+    model = cut>0 ? s.slice(0,cut) : s;
+  }
+  model = model.replace(/\s*[\(\[].*$/, "").replace(/\s+/g," ").replace(/[\/,;:\-–—]+\s*$/,"").trim();
+  if(model.length>60) model = model.slice(0,60).trim();
+  return { device, cat, brand, model };
+}
+const EXT_ICON = ic('<path d="M14 3h7v7"/><path d="M21 3l-9 9"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>');
+const SEARCH_ICON = ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>');
+function partsSearchUrl(base,q){ return base+"/catalogsearch/result/?q="+encodeURIComponent(q||""); }
+function partsLookupBlock(){
+  const stores = PARTS_SUPPLIERS.map(s=>
+    `<button class="pl-store" data-store="${esc(s.base)}">${esc(s.name)}<span class="ext">${EXT_ICON}</span></button>`
+  ).join('');
+  return `<div class="parts-lookup">
+    <div class="pl-lbl">Look up part cost</div>
+    <div class="pl-search">
+      <input type="text" class="pl-q" placeholder="e.g. iPhone 12 screen" autocomplete="off" spellcheck="false">
+      <button class="pl-go" type="button">${SEARCH_ICON} Search</button>
+    </div>
+    <div class="pl-results" aria-live="polite"></div>
+    <div class="pl-stores"><span class="pl-stores-lbl">Or open a store</span><div class="pl-store-btns">${stores}</div></div>
+  </div>`;
+}
+function renderPartsResults(el, data, costEl){
+  if(!data || data.error){
+    el.innerHTML = `<div class="pl-status warn">Couldn't reach the lookup — use a store button below.</div>`; return;
+  }
+  const results = (data.results)||[];
+  if(!results.length){
+    el.innerHTML = `<div class="pl-status">No automatic match — try a shorter search or open a store below.</div>`; return;
+  }
+  const rows = results.map(r=>
+    `<button class="pl-row" data-price="${Number(r.price)}"><span class="pl-name">${esc(r.name)}</span><span class="pl-price">$${Number(r.price).toFixed(2)}</span></button>`
+  ).join('');
+  el.innerHTML = `<div class="pl-src">From <b>${esc(data.supplier||'')}</b> · tap to fill price, type &amp; category</div><div class="pl-list">${rows}</div>`;
+  el.querySelectorAll('.pl-row').forEach(row=>row.onclick=()=>{
+    el.querySelectorAll('.pl-row').forEach(x=>x.classList.remove('sel'));
+    row.classList.add('sel');
+    const nm = (row.querySelector('.pl-name')||{}).textContent || '';
+    const info = partInfo(nm);
+    _odPart = { brand:info.brand, model:info.model };   // for the appointment booking details
+    const devEl = stage.querySelector('.od-device'), catEl = stage.querySelector('.od-cat');
+    if(devEl && info.device) devEl.value = info.device;
+    if(catEl && info.cat && [...catEl.options].some(o=>o.value===info.cat)) catEl.value = info.cat;
+    if(costEl) costEl.value = Number(row.dataset.price).toFixed(2);
+    // one dispatch recalculates everything (odRun reads device, category & cost)
+    (costEl || devEl || catEl).dispatchEvent(new Event('change',{bubbles:true}));
+  });
+}
+function wirePartsLookup(){
+  const q = stage.querySelector('.pl-q'); if(!q) return;
+  const go = stage.querySelector('.pl-go'), resultsEl = stage.querySelector('.pl-results');
+  const costEl = stage.querySelector('.od-cost');
+  const run = async ()=>{
+    const query = q.value.trim();
+    if(!query){ resultsEl.innerHTML=''; return; }
+    resultsEl.innerHTML = `<div class="pl-status">Searching MobileSentrix…</div>`;
+    let data=null;
+    try{ data = await (await fetch('/api/parts?q='+encodeURIComponent(query),{headers:{'Accept':'application/json'}})).json(); }
+    catch(e){ data = {error:String(e&&e.message||e)}; }
+    renderPartsResults(resultsEl, data, costEl);
+  };
+  go.onclick = run;
+  q.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); run(); } });
+  stage.querySelectorAll('[data-store]').forEach(b=>b.onclick=()=>openPartsWindow(partsSearchUrl(b.dataset.store, q.value.trim())));
+}
+let _partsWin=null;
+function openPartsWindow(url){
+  const w = Math.max(560, Math.floor(screen.availWidth/2));
+  const h = screen.availHeight;
+  const left = Math.max(0, screen.availWidth - w);
+  const feat = `width=${w},height=${h},left=${left},top=0,noopener=no`;
+  try{
+    if(_partsWin && !_partsWin.closed){ _partsWin.location.href=url; _partsWin.focus(); }
+    else { _partsWin = window.open(url, 'cw_parts', feat); if(_partsWin) _partsWin.focus(); }
+  }catch(e){ window.open(url, '_blank'); }
+}
+
+function apptCtaLeft(){
+  return `<div class="appt-inline-wrap"><button class="appt-inline" data-appt="1">`
+    + `${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')} Schedule an appointment</button></div>`;
+}
+// getUrl may be a string or a function evaluated at click time (so a live
+// calculator price is captured the moment the tech taps the button).
+function wireApptButtons(back, getUrl){
+  stage.querySelectorAll('[data-appt]').forEach(b=>b.onclick=()=>{
+    const url = typeof getUrl==="function" ? getUrl() : getUrl;
+    renderAppointments(back, url);
+  });
+}
+
+function startFlow(id){ state={flowId:id,idx:0,actions:new Set()}; history=[]; renderStep(); }
+
+function renderStep(){
+  const flow=FLOWS[state.flowId], step=flow.steps[state.idx], total=flow.steps.length;
+  let flowbar=`<div class="flowbar"><button class="back" id="backBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag"><span class="dot" style="background:${flow.color}"></span>${esc(flow.label)}</span>`;
+  if(total>1) flowbar+=`<span class="steptrack">Step ${state.idx+1} / ${total}</span>`;
+  flowbar+=`</div>`;
+
+  // LEFT = what to say/read  (script text is admin-overridable by flow+step id)
+  const sk = 'flow.'+state.flowId+'.'+step.id;
+  let left='';
+  if(step.say) left+=sayBlock(t(sk+'.say', step.say));
+  if(step.note) left+=noteBlock(t(sk+'.note', step.note),step.warn);
+  if(step.close) left+=apptCtaLeft();
+
+  // RIGHT = what to do
+  let right='';
+  if(step.embed) right+=embedBlock(step.embed);
+  if(step.sayAfterEmbed) right+=sayBlock(t(sk+'.sayAfterEmbed', step.sayAfterEmbed),"Once submitted, say");
+  if(step.extras) right+=extrasBlock(step.extras);
+  if(step.sections){ right+=`<div class="sec-lbl">Pricing &amp; coverage</div>`+step.sections.map(sectionBlock).join(''); }
+  if(step.choices) right+=choicesBlock(step.choices);
+  let full='';
+  if(step.close){
+    if(step.noAsk){ right+=computerCloseCards(); full=computerObjections(); }
+    else right+=closingBlock(false);
+  }
+  if(step.checklist) right+=checklistBlock(step.checklist);
+
+  let footer='';
+  if(step.end) footer=`<button class="btn-ghost" id="prevBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="finishBtn">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
+  else if(step.choices) footer=`<button class="btn-ghost" id="prevBtn">Back</button><span class="push hint">Pick an option to continue</span>`;
+  else footer=`<button class="btn-ghost" id="prevBtn">Back</button><button class="btn-primary push" id="nextBtn">Next ${ic('<path d="M9 18l6-6-6-6"/>')}</button>`;
+
+  stage.innerHTML=screen({flowbar,accent:flow.color,accentSoft:flow.tintSoft,title:esc(step.title),sub:step.sub?esc(step.sub):'',left,right,full,footer});
+  wireStep(step);
+}
+
+function wireStep(step){
+  document.getElementById('backBtn').onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} else renderHome(); };
+  const prev=document.getElementById('prevBtn'); if(prev) prev.onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} else renderHome(); };
+  const next=document.getElementById('nextBtn'); if(next) next.onclick=()=>goNext(step.next);
+  const finish=document.getElementById('finishBtn'); if(finish) finish.onclick=goHome;
+  wireApptButtons(()=>renderStep(), APPT_LINKS.computer);
+
+  stage.querySelectorAll('.choice').forEach(b=>b.onclick=()=>goNext(step.choices[+b.dataset.choice].next));
+
+  // accordions
+  stage.querySelectorAll('.acc-head').forEach(hd=>hd.onclick=()=>hd.parentElement.classList.toggle('open'));
+
+  // calculators
+  stage.querySelectorAll('.calc').forEach(setupCalc);
+
+  // closing reveals
+  const closing=stage.querySelector('.closing');
+  if(closing){
+    closing.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{
+      closing.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x===b));
+      closing.querySelectorAll('[data-rev]').forEach(r=>r.classList.toggle('show',r.dataset.rev===b.dataset.r));
+    });
+    // objection buttons: toggle off if re-tapped, so nothing is forced open
+    closing.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
+      const was=b.classList.contains('on');
+      closing.querySelectorAll('[data-o]').forEach(x=>x.classList.remove('on'));
+      closing.querySelectorAll('[data-orev]').forEach(r=>r.classList.remove('show'));
+      if(!was){ b.classList.add('on'); const t=closing.querySelector(`[data-orev="${b.dataset.o}"]`); if(t) t.classList.add('show'); }
+    });
+  }
+
+  // checklist
+  stage.querySelectorAll('.act').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.act;
+    if(state.actions.has(a)) state.actions.delete(a); else state.actions.add(a);
+    b.classList.toggle('on');
+  });
+}
+
+function setupCalc(el){
+  const device=el.dataset.device, fixed=el.dataset.category;
+  const cost=el.querySelector('.c-cost'), labor=el.querySelector('.c-labor'), catSel=el.querySelector('.c-cat');
+  const cust=el.querySelector('.c-cust'), mraWrap=el.querySelector('.c-mra-wrap'), mra=el.querySelector('.c-mra');
+  const scope=el.closest('.acc-body')||stage;
+  const sayPrice=scope.querySelector('.say-price'), cov=scope.querySelector('.c-cov');
+  function currentCat(){ return catSel?catSel.value:fixed; }
+  function run(){
+    const cat=currentCat();
+    if(cov&&catSel) cov.textContent=coverageFor(device,cat);
+    const r=priceCalc(device,cat,cost?cost.value:'',labor.value);
+    if(!r){ cust.textContent='$—'; if(sayPrice)sayPrice.textContent='$xxx.xx'; if(mraWrap)mraWrap.style.display='none'; return; }
+    cust.textContent=money(r.customer);
+    if(sayPrice) sayPrice.textContent=money(r.customer);
+    if(mraWrap){ if(r.mra!=null){ mraWrap.style.display=''; mra.textContent=money(r.mra);} else mraWrap.style.display='none'; }
+  }
+  [cost,labor,catSel].forEach(i=>{ if(i){ i.addEventListener('input',run); i.addEventListener('change',run);} });
+  run();
+}
+
+function goNext(id){
+  const flow=FLOWS[state.flowId];
+  history.push(state.idx);
+  const i=id?flow.steps.findIndex(s=>s.id===id):-1;
+  state.idx=i>=0?i:Math.min(state.idx+1,flow.steps.length-1);
+  renderStep();
+}
+
+/* =========================================================================
+   ADMIN PANEL — open at #admin, unlock with the code, edit scripts (no-code).
+   Saves to /api/config (n8n); the PIN is verified server-side.
+   ========================================================================= */
+function rerenderCurrent(){
+  if(document.getElementById('cwAdmin')) return;
+  if(!state) renderHome();
+  else if(state.mode==="device"&&state.dr) renderDevice(state.dr);
+  else renderStep();
+}
+
+const ADMIN_SCHEMA = [
+  { title:'Greeting', fields:[
+    {k:'greeting.hello',l:'Greeting — first line'},{k:'greeting.note1',l:'Greeting — note'},
+    {k:'greeting.help',l:'Greeting — then say'},{k:'greeting.note2',l:'Greeting — second note'} ]},
+  { title:'Computer Repair', fields:[
+    {k:'flow.computer.issue.say',l:'Issue step — say'},{k:'flow.computer.sw.say',l:'Software issue — script'},
+    {k:'flow.computer.hw.say',l:'Hardware issue — script'},{k:'flow.computer.hw.note',l:'Hardware — note'},
+    {k:'flow.computer.ns.say',l:'Not sure — script'},{k:'flow.computer.ns.note',l:'Not sure — note'} ]},
+  { title:'SOHO / Support', fields:[
+    {k:'flow.support.business.say',l:'Managed IT — say'},{k:'flow.support.business.note',l:'Managed IT — note'},
+    {k:'flow.support.soho.sayAfterEmbed',l:'SOHO — after submit'} ]},
+  { title:'Closing the call', fields:[
+    {k:'close.beforeLocated',l:'Before you head over'},{k:'close.locationNote',l:'Location note'},
+    {k:'close.lookForward',l:'Look-forward line'},{k:'close.signoff',l:'Sign-off'} ]},
+  { title:'Objections', fields:[
+    {k:'obj.intro',l:'Objection intro'},{k:'obj.timing',l:'Timing response'},{k:'obj.price',l:'Price response'},
+    {k:'obj.shopping',l:'Shopping-around response'},{k:'obj.priorityNote',l:'Priority pricing note'},
+    {k:'obj.financeNote',l:'Financing note'},{k:'obj.computerSub',l:'Computer objections subtitle'},
+    {k:'obj.computerPriorityNote',l:'Computer priority note'},{k:'obj.deviceSub',l:'Device objections subtitle'} ]},
+  { title:'Closing question (device)', fields:[
+    {k:'ask.console',l:'Console'},{k:'ask.tablet',l:'iPad / tablet'},{k:'ask.phoneOther',l:'Phone (Other Device)'},
+    {k:'ask.phoneInStock',l:'Phone — in stock'},{k:'ask.phoneOrder',l:'Phone — special order'} ]},
+  { title:'Warranty lines (price scripts)', fields:[
+    {k:'benefit.screen',l:'Screen'},{k:'benefit.battery',l:'Battery'},{k:'benefit.charging',l:'Charging port'},
+    {k:'benefit.backglass',l:'Back glass'},{k:'benefit.hdmi',l:'HDMI'},{k:'benefit.cleaning',l:'Cleaning (no part)'},
+    {k:'benefit.other',l:'Default'},{k:'benefit.console',l:'Console'} ]},
+  { title:'Turnaround lines (price scripts)', note:'Keep the {noun}, {part} and {Nouns} tags — they fill in automatically.', fields:[
+    {k:'turn.backglass',l:'Back glass — order'},{k:'turn.charging',l:'Charging port — order'},
+    {k:'turn.instockScreen',l:'Screen — in stock'},{k:'turn.instockBattery',l:'Battery — in stock'},
+    {k:'turn.instockOther',l:'Other — in stock'},{k:'turn.tier2Battery',l:'Order battery (a few days)'},
+    {k:'turn.tier2Other',l:'Order part (overnight)'},{k:'turn.queueTablet',l:'iPad/tablet queue'},
+    {k:'turn.queueConsole',l:'Console queue'},{k:'priceLine',l:'Price line (keep {price})'} ]},
+  { title:'Shop info', fields:[
+    {k:'shop.hours',l:'Hours'},{k:'shop.wilmingtonName',l:'Wilmington — name'},{k:'shop.wilmingtonAddr',l:'Wilmington — address'},
+    {k:'shop.wilmingtonNear',l:'Wilmington — directions'},{k:'shop.jacksonvilleName',l:'Jacksonville — name'},
+    {k:'shop.jacksonvilleAddr',l:'Jacksonville — address'},{k:'shop.jacksonvilleNear',l:'Jacksonville — directions'} ]},
+  { title:'Coverage wording', fields:[
+    {k:'cov.screen',l:'Screen coverage'},{k:'cov.battery',l:'Battery coverage'},{k:'cov.lifetime',l:'Lifetime coverage'},
+    {k:'cov.consoleHw',l:'Console hardware'},{k:'cov.cleaning',l:'Cleaning'} ]}
+];
+
+// Populate DEF with every default so the editor can show + reset them.
+function primeDefaults(){
+  const P=(k,v)=>{ if(v!==undefined && DEF[k]===undefined) DEF[k]=v; };
+  P('greeting.hello',"Thanks for calling Computer Warriors, this is [name]. Who do I have the pleasure of speaking with?");
+  P('greeting.note1',"Get the customer's name and use it naturally during the call.");
+  P('greeting.help',"Hey [name], how can we help you today?");
+  P('greeting.note2',"Ask about the device type, the issue, or whether they need remote / onsite help.");
+  FLOWS.computer.steps.forEach(s=>{ P('flow.computer.'+s.id+'.say',s.say); P('flow.computer.'+s.id+'.note',s.note); });
+  FLOWS.support.steps.forEach(s=>{ P('flow.support.'+s.id+'.say',s.say); P('flow.support.'+s.id+'.note',s.note); P('flow.support.'+s.id+'.sayAfterEmbed',s.sayAfterEmbed); });
+  P('shop.hours',SHOP.hours);
+  P('shop.wilmingtonName',SHOP.wilmington.name); P('shop.wilmingtonAddr',SHOP.wilmington.addr); P('shop.wilmingtonNear',SHOP.wilmington.near);
+  P('shop.jacksonvilleName',SHOP.jacksonville.name); P('shop.jacksonvilleAddr',SHOP.jacksonville.addr); P('shop.jacksonvilleNear',SHOP.jacksonville.near);
+  try{ ['screen','battery','charging','backglass','hdmi','cleaning','other','console'].forEach(c=>benefitLine(c,'phone'));
+    tierScript('1','screen','iPhone','phone'); tierScript('1','battery','iPhone','phone'); tierScript('1','charging','iPhone','phone');
+    tierScript('1','backglass','iPhone','phone'); tierScript('1','other','iPhone','phone'); tierScript('2','battery','Samsung','phone'); tierScript('2','other','Samsung','phone');
+    tierScript('3a','screen','iPad','tablet'); tierScript('3b','cleaning','console','console'); tierScript('3b','other','console','console');
+    closingAsk('1','screen','phone',false); closingAsk('1','charging','phone',false); closingAsk('3a','x','tablet',false);
+    closingAsk('3b','x','console',false); closingAsk('2','x','phone',true);
+    objectionBlock(); signoffBlock(false); computerCloseCards(); computerObjections(); deviceObjections();
+    ['Screen','Battery','Cleaning / Overheating','Charging Port'].forEach(cat=>{ coverageFor('Phone',cat); coverageFor('Console',cat); });
+  }catch(e){}
+}
+
+const ADMIN_CSS = `<style>
+#cwAdmin .cwa-wrap{position:fixed;inset:0;z-index:9999;background:rgba(17,23,33,.55);display:flex;align-items:center;justify-content:center;padding:18px;font-family:var(--body)}
+#cwAdmin .cwa-card{background:#fff;border-radius:16px;box-shadow:var(--sh-3);padding:26px;width:100%;max-width:360px}
+#cwAdmin .cwa-h{font-family:var(--disp);font-size:19px;font-weight:700;margin-bottom:14px}
+#cwAdmin .cwa-pin{width:100%;box-sizing:border-box;font-size:18px;letter-spacing:3px;text-align:center;padding:12px;border:1.5px solid var(--line);border-radius:10px;outline:none}
+#cwAdmin .cwa-pin:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,138,32,.16)}
+#cwAdmin .cwa-err{color:var(--alert);font-size:13px;min-height:18px;margin:8px 2px}
+#cwAdmin .cwa-row{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+#cwAdmin .cwa-btn{background:linear-gradient(180deg,#F0A03A,var(--accent));color:#241202;border:none;border-radius:10px;padding:11px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--body)}
+#cwAdmin .cwa-btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--muted);font-weight:600}
+#cwAdmin .cwa-panel{background:var(--paper);border-radius:16px;box-shadow:var(--sh-3);width:100%;max-width:800px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+#cwAdmin .cwa-top{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;background:#fff;border-bottom:1px solid var(--line)}
+#cwAdmin .cwa-title{font-family:var(--disp);font-size:18px;font-weight:700}
+#cwAdmin .cwa-body{overflow-y:auto;padding:18px 22px}
+#cwAdmin .cwa-group{margin-bottom:22px}
+#cwAdmin .cwa-gh{font-family:var(--disp);font-size:13px;font-weight:700;color:var(--accent-deep);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+#cwAdmin .cwa-gnote{font-size:12px;color:var(--faint);margin-bottom:10px}
+#cwAdmin .cwa-field{margin-bottom:12px}
+#cwAdmin .cwa-field label{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:4px}
+#cwAdmin .cwa-reset{background:none;border:none;color:var(--faint);font-size:11px;cursor:pointer;text-decoration:underline}
+#cwAdmin textarea{width:100%;box-sizing:border-box;font-family:var(--body);font-size:13.5px;line-height:1.5;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;resize:vertical;outline:none}
+#cwAdmin textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,138,32,.14)}
+#cwAdmin .cwa-save{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:14px 22px;background:#fff;border-top:1px solid var(--line)}
+#cwAdmin .cwa-status{font-size:13px;color:var(--muted)}
+#cwAdmin .cwa-status.ok{color:var(--good)} #cwAdmin .cwa-status.err{color:var(--alert)}
+</style>`;
+
+function openAdmin(){
+  primeDefaults();
+  let el = document.getElementById('cwAdmin');
+  if(!el){ el = document.createElement('div'); el.id='cwAdmin'; document.body.appendChild(el); }
+  el.innerHTML = ADMIN_CSS + `<div class="cwa-wrap"><div class="cwa-card">
+    <div class="cwa-h">Admin — enter code</div>
+    <input type="password" id="cwaPin" class="cwa-pin" placeholder="Code" autocomplete="off" inputmode="numeric">
+    <div class="cwa-err" id="cwaGateErr"></div>
+    <div class="cwa-row"><button class="cwa-btn ghost" id="cwaCancel">Cancel</button><button class="cwa-btn" id="cwaUnlock">Unlock</button></div>
+  </div></div>`;
+  el.querySelector('#cwaCancel').onclick=closeAdmin;
+  const go=()=>adminUnlock(el);
+  el.querySelector('#cwaUnlock').onclick=go;
+  const pin=el.querySelector('#cwaPin'); pin.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); }); setTimeout(()=>pin.focus(),50);
+}
+function closeAdmin(){
+  const el=document.getElementById('cwAdmin'); if(el) el.remove();
+  if(location.hash==='#admin') history.replaceState(null,'',location.pathname+location.search);
+  rerenderCurrent();
+}
+async function adminUnlock(el){
+  const pin = el.querySelector('#cwaPin').value;
+  const errEl = el.querySelector('#cwaGateErr'); errEl.textContent='Checking…';
+  try{
+    const r = await fetch('/api/config.js',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin, config: ADMIN_CFG})});
+    const d = await r.json();
+    if(d && d.ok) renderAdminEditor(el, pin);
+    else errEl.textContent = (d && d.error==='invalid_pin') ? 'Incorrect code.' : 'Could not verify — try again.';
+  }catch(e){ errEl.textContent='Network error.'; }
+}
+function renderAdminEditor(el, pin){
+  const groups = ADMIN_SCHEMA.map(g=>{
+    const fields = g.fields.map(f=>{
+      const cur = ov(f.k)!=null ? ov(f.k) : (DEF[f.k]||'');
+      const rows = Math.min(9, Math.max(2, Math.ceil((String(cur).length||20)/58)));
+      return `<div class="cwa-field"><label>${esc(f.l)}<button class="cwa-reset" data-reset="${esc(f.k)}">reset</button></label>`
+        + `<textarea data-k="${esc(f.k)}" rows="${rows}">${esc(cur)}</textarea></div>`;
+    }).join('');
+    return `<div class="cwa-group"><div class="cwa-gh">${esc(g.title)}</div>${g.note?`<div class="cwa-gnote">${esc(g.note)}</div>`:''}${fields}</div>`;
+  }).join('');
+  el.innerHTML = ADMIN_CSS + `<div class="cwa-wrap"><div class="cwa-panel">
+    <div class="cwa-top"><div class="cwa-title">Edit call scripts</div><button class="cwa-btn ghost" id="cwaClose">Close</button></div>
+    <div class="cwa-body">${groups}</div>
+    <div class="cwa-save"><span class="cwa-status" id="cwaStatus"></span><button class="cwa-btn" id="cwaSave">Save changes</button></div>
+  </div></div>`;
+  el.querySelector('#cwaClose').onclick=closeAdmin;
+  el.querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{ const ta=el.querySelector('textarea[data-k="'+b.dataset.reset+'"]'); if(ta) ta.value = DEF[b.dataset.reset]||''; });
+  el.querySelector('#cwaSave').onclick=()=>saveAdmin(el, pin);
+}
+async function saveAdmin(el, pin){
+  const status = el.querySelector('#cwaStatus'); status.textContent='Saving…'; status.className='cwa-status';
+  const config = {};
+  el.querySelectorAll('textarea[data-k]').forEach(ta=>{
+    const k=ta.dataset.k, v=ta.value;
+    if(v !== (DEF[k]||'')) deepSet(config, k, v);
+  });
+  try{
+    const r = await fetch('/api/config.js',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin, config})});
+    const d = await r.json();
+    if(d && d.ok){ ADMIN_CFG = config; status.textContent='Saved — scripts updated on every device.'; status.className='cwa-status ok'; }
+    else { status.textContent = (d && d.error==='invalid_pin') ? 'Incorrect code — not saved.' : 'Save failed — try again.'; status.className='cwa-status err'; }
+  }catch(e){ status.textContent='Network error — not saved.'; status.className='cwa-status err'; }
+}
+
+new MutationObserver(scheduleFit).observe(stage,{childList:true,subtree:true});
+window.addEventListener('resize',scheduleFit);
+document.getElementById('homeBtn').onclick=goHome;
+document.getElementById('infoBtn').onclick=renderInfo;
+window.addEventListener('hashchange',()=>{ if(location.hash==='#admin') openAdmin(); });
+goHome();
+Promise.all([loadAdminConfig(), loadPricing()]).then(()=>{ rerenderCurrent(); if(location.hash==='#admin') openAdmin(); });
+</script>
+</body>
+</html>
