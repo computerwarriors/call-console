@@ -577,6 +577,38 @@ const FLOWS = {
 };
 
 /* =========================================================================
+   ADMIN CONFIG — script overrides, loaded from /api/config (n8n-backed).
+   Techs never see this; the shop owner opens it at #admin with a PIN and
+   edits the scripts. Overrides are looked up by key with ov('group.key');
+   if there's no override the code's built-in default text is used.
+   ========================================================================= */
+let ADMIN_CFG = {};
+const DEF = {};   // built-in default text, captured as t() is called (used by the admin panel)
+function deepGet(obj, path){
+  return String(path).split('.').reduce((o,k)=> (o && o[k]!==undefined ? o[k] : undefined), obj);
+}
+function deepSet(obj, path, val){
+  const keys = String(path).split('.'); let o = obj;
+  for(let i=0;i<keys.length-1;i++){ if(typeof o[keys[i]]!=='object'||o[keys[i]]===null) o[keys[i]]={}; o=o[keys[i]]; }
+  o[keys[keys.length-1]] = val;
+}
+function ov(path){ const v = deepGet(ADMIN_CFG, path); return (v===undefined || v===null || v==='') ? null : v; }
+// t(path, fallback): override if present, else the built-in default text.
+function t(path, fallback){
+  if(fallback!==undefined && DEF[path]===undefined) DEF[path]=fallback;
+  const o = ov(path);
+  return o!=null ? o : (fallback!==undefined ? fallback : (DEF[path]||''));
+}
+
+async function loadAdminConfig(){
+  try{
+    const r = await fetch('/api/config', { headers:{ 'Accept':'application/json' }, cache:'no-store' });
+    const d = await r.json();
+    if(d && d.config && typeof d.config==='object') ADMIN_CFG = d.config;
+  }catch(e){ /* keep defaults */ }
+}
+
+/* =========================================================================
    ENGINE
    ========================================================================= */
 const stage=document.getElementById('stage');
@@ -656,11 +688,11 @@ function priceCalc(device,category,costIn,laborIn){
   return {customer,mra};
 }
 function coverageFor(device,cat){
-  if(cat==='Screen') return COV.screen;
-  if(cat==='Battery') return COV.battery;
-  if(cat==='Cleaning / Overheating') return COV.cleaning;
-  if(device==='Console') return COV.consoleHw;
-  return COV.lifetime;
+  if(cat==='Screen') return t('cov.screen',COV.screen);
+  if(cat==='Battery') return t('cov.battery',COV.battery);
+  if(cat==='Cleaning / Overheating') return t('cov.cleaning',COV.cleaning);
+  if(device==='Console') return t('cov.consoleHw',COV.consoleHw);
+  return t('cov.lifetime',COV.lifetime);
 }
 
 /* ---- render helpers ---- */
@@ -703,36 +735,40 @@ const SAY_SHOPPING = "Totally makes sense \u2014 I'd do the same thing. We may n
 
 function objectionBlock(){
   return `<div class="obj-btns"><button class="obj-b" data-o="timing">Timing</button><button class="obj-b" data-o="price">Price</button><button class="obj-b" data-o="shopping">Shopping around</button></div>
-      <div class="reveal" data-orev="timing">${sayBlock(SAY_TIMING)}<div class="mini-note">Priority service \u2014 Computer <b>$100</b> \u00B7 Phone / tablet <b>$75</b> \u00B7 Console <b>$75</b></div></div>
-      <div class="reveal" data-orev="price">${sayBlock(SAY_PRICE)}<div class="mini-note">Financing link is a reminder \u2014 no link wired in yet.</div></div>
-      <div class="reveal" data-orev="shopping">${sayBlock(SAY_SHOPPING)}</div>`;
+      <div class="reveal" data-orev="timing">${sayBlock(t('obj.timing',SAY_TIMING))}<div class="mini-note">${t('obj.priorityNote','Priority service \u2014 Computer $100 \u00B7 Phone / tablet $75 \u00B7 Console $75')}</div></div>
+      <div class="reveal" data-orev="price">${sayBlock(t('obj.price',SAY_PRICE))}<div class="mini-note">${t('obj.financeNote','Financing link is a reminder \u2014 no link wired in yet.')}</div></div>
+      <div class="reveal" data-orev="shopping">${sayBlock(t('obj.shopping',SAY_SHOPPING))}</div>`;
 }
 
 const SIGNOFF = "If you have any other questions or concerns along the way, don't hesitate to reach out. That's what we're here for.";
 function signoffBlock(withHeader){
-  const inner = sayBlock(SIGNOFF);
+  const inner = sayBlock(t('close.signoff',SIGNOFF));
   return withHeader
     ? `<div class="closing"><div class="closing-h">Close the call</div>${inner}</div>`
     : `<div class="signoff">${inner}</div>`;
 }
 
+const D_BEFORE = "Perfect! Before you head over, do you know where we're located?";
+const D_LOCNOTE = "If they're not sure, tap Info at the top and read them the nearest location.";
+const D_LOOKFWD = "Okay, great. We look forward to seeing you in the shop!";
+const D_OBJINTRO = "No problem at all. Is it the timing, the price, or are you still comparing options?";
 function computerCloseCards(){
-  return `${sayBlock("Perfect! Before you head over, do you know where we're located?")}`
-    + `${noteBlock("If they're not sure, tap Info at the top and read them the nearest location.")}`
-    + `${sayBlock("Okay, great. We look forward to seeing you in the shop! " + SIGNOFF,"Then say")}`;
+  return `${sayBlock(t('close.beforeLocated',D_BEFORE))}`
+    + `${noteBlock(t('close.locationNote',D_LOCNOTE))}`
+    + `${sayBlock(t('close.lookForward',D_LOOKFWD) + " " + t('close.signoff',SIGNOFF),"Then say")}`;
 }
 function computerObjections(){
   return `<div class="closing"><div class="closing-h">Objections</div>
-    <p class="closing-sub">If they can't come in today, it's almost always timing.</p>
-    ${sayBlock(SAY_TIMING)}
-    <div class="mini-note">Computer priority service \u2014 <b>$100</b></div>
+    <p class="closing-sub">${t('obj.computerSub',"If they can't come in today, it's almost always timing.")}</p>
+    ${sayBlock(t('obj.timing',SAY_TIMING))}
+    <div class="mini-note">${t('obj.computerPriorityNote','Computer priority service \u2014 $100')}</div>
   </div>`;
 }
 
 function deviceObjections(){
   return `<div class="closing"><div class="closing-h">Objections</div>
-    <p class="closing-sub">If they can't come in today, it's usually timing, price, or still shopping.</p>
-    ${sayBlock("No problem at all. Is it the timing, the price, or are you still comparing options?")}
+    <p class="closing-sub">${t('obj.deviceSub',"If they can't come in today, it's usually timing, price, or still shopping.")}</p>
+    ${sayBlock(t('obj.intro',D_OBJINTRO))}
     ${objectionBlock()}
   </div>`;
 }
@@ -822,25 +858,25 @@ function deviceTier(b, model, cls){
 }
 
 function benefitLine(cls, noun){
-  if(cls==="screen")    return `That screen repair comes with a lifetime warranty against part defects, plus one free screen replacement within the first 12 months \u2014 so if it breaks again during that first year, you're not paying for another screen.`;
-  if(cls==="battery")   return `That battery replacement comes with a one-year warranty against part defects.`;
-  if(cls==="charging")  return `That charging port repair comes with a lifetime warranty against part defects.`;
-  if(cls==="backglass") return `That back glass repair comes with a lifetime warranty against part defects.`;
-  if(cls==="hdmi")      return `That HDMI repair comes with a one-year warranty against part defects.`;
-  if(cls==="cleaning")  return `Since we're only cleaning and servicing \u2014 not installing a part \u2014 there's no replacement-part warranty.`;
-  return `That repair comes with a lifetime warranty against part defects.`;
+  if(cls==="screen")    return t('benefit.screen', "That screen repair comes with a lifetime warranty against part defects, plus one free screen replacement within the first 12 months \u2014 so if it breaks again during that first year, you're not paying for another screen.");
+  if(cls==="battery")   return t('benefit.battery', "That battery replacement comes with a one-year warranty against part defects.");
+  if(cls==="charging")  return t('benefit.charging', "That charging port repair comes with a lifetime warranty against part defects.");
+  if(cls==="backglass") return t('benefit.backglass', "That back glass repair comes with a lifetime warranty against part defects.");
+  if(cls==="hdmi")      return t('benefit.hdmi', "That HDMI repair comes with a one-year warranty against part defects.");
+  if(cls==="cleaning")  return t('benefit.cleaning', "Since we're only cleaning and servicing \u2014 not installing a part \u2014 there's no replacement-part warranty.");
+  return t('benefit.other', "That repair comes with a lifetime warranty against part defects.");
 }
 
 /* Device-specific closing ask. `family` is phone/tablet/console; `other` = the
    Other Device / manual calculator (device family known, stock status unknown). */
 function closingAsk(tier, cls, family, other){
-  if(family==="console") return "Would you like to bring the console in today, or schedule a time to drop it off?";
-  if(family==="tablet")  return "Would you like to bring it in today, or schedule a time to drop it off?";
-  if(other)              return "Would you like to bring it in today, or schedule a time to come in?";
+  if(family==="console") return t('ask.console', "Would you like to bring the console in today, or schedule a time to drop it off?");
+  if(family==="tablet")  return t('ask.tablet', "Would you like to bring it in today, or schedule a time to drop it off?");
+  if(other)              return t('ask.phoneOther', "Would you like to bring it in today, or schedule a time to come in?");
   const inStock = tier==="1" && (cls==="screen"||cls==="battery"||cls==="other");
   return inStock
-    ? "Would you like to bring it in today, or schedule a time to have the repair completed?"
-    : "Would you like to stop by today so we can confirm the exact model and get the part ordered, or schedule a time to come in?";
+    ? t('ask.phoneInStock', "Would you like to bring it in today, or schedule a time to have the repair completed?")
+    : t('ask.phoneOrder', "Would you like to stop by today so we can confirm the exact model and get the part ordered, or schedule a time to come in?");
 }
 
 function tierScript(tier, cls, noun, family, other){
@@ -848,24 +884,26 @@ function tierScript(tier, cls, noun, family, other){
   if(tier==="3b"){
     benefit = cls==="cleaning" ? benefitLine("cleaning",noun)
             : cls==="screen"   ? benefitLine("screen","console")
-            : `That console repair comes with a lifetime warranty against part defects.`;
+            : t('benefit.console', "That console repair comes with a lifetime warranty against part defects.");
   } else {
     benefit = benefitLine(cls, noun);
   }
+  const Noun = noun.charAt(0).toUpperCase()+noun.slice(1), Nouns = noun==="iPad"?"iPads":Noun+"s";
   let turn;
-  if(cls==="backglass") turn = `Back glass isn't something we keep in stock, so we'll order it in \u2014 it ships overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
-  else if(cls==="charging" && (tier==="1"||tier==="2")) turn = `Charging ports aren't something we keep in stock, so we'll order the port in \u2014 it ships overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
+  if(cls==="backglass") turn = t('turn.backglass', "Back glass isn't something we keep in stock, so we'll order it in \u2014 it ships overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.");
+  else if(cls==="charging" && (tier==="1"||tier==="2")) turn = t('turn.charging', "Charging ports aren't something we keep in stock, so we'll order the port in \u2014 it ships overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.");
   else if(tier==="1")  turn = cls==="screen"
-                           ? `We keep those screens in stock, so we'll have it done in about 30 to 45 minutes.`
+                           ? t('turn.instockScreen', "We keep those screens in stock, so we'll have it done in about 30 to 45 minutes.")
                            : cls==="battery"
-                           ? `We keep those batteries in stock, so we'll have it done in about 30 to 45 minutes.`
-                           : `If we've got the part in stock, we'll have it done in about 30 to 45 minutes.`;
+                           ? t('turn.instockBattery', "We keep those batteries in stock, so we'll have it done in about 30 to 45 minutes.")
+                           : t('turn.instockOther', "If we've got the part in stock, we'll have it done in about 30 to 45 minutes.");
   else if(tier==="2")  turn = cls==="battery"
-                           ? `Since it's a ${noun}, we'll check it in to confirm the exact model and order the battery \u2014 we can't overnight batteries, so it's usually a couple of business days. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`
-                           : `Since it's a ${noun}, we'll check it in to confirm the exact model and order the ${partWord(cls)} \u2014 it comes in overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.`;
-  else if(tier==="3a") turn = `${noun==="iPad"?"iPads":noun.charAt(0).toUpperCase()+noun.slice(1)+"s"} go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
-  else                 turn = `Consoles go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.`;
-  return `${benefit} ${turn} It's only {price} plus tax.\n\n${closingAsk(tier,cls,family,other)}`;
+                           ? t('turn.tier2Battery', "Since it's a {noun}, we'll check it in to confirm the exact model and order the battery \u2014 we can't overnight batteries, so it's usually a couple of business days. There's a fifty-dollar deposit to order the part, and that goes toward the repair.")
+                           : t('turn.tier2Other', "Since it's a {noun}, we'll check it in to confirm the exact model and order the {part} \u2014 it comes in overnight, so we'd have it done the next day. There's a fifty-dollar deposit to order the part, and that goes toward the repair.");
+  else if(tier==="3a") turn = t('turn.queueTablet', "{Nouns} go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.");
+  else                 turn = t('turn.queueConsole', "Consoles go into our repair queue, and we work on devices in the order they come in \u2014 so you're looking at about two to three business days.");
+  turn = turn.replace(/\{noun\}/g, noun).replace(/\{part\}/g, partWord(cls)).replace(/\{Nouns\}/g, Nouns).replace(/\{Noun\}/g, Noun);
+  return `${benefit} ${turn} ${t('priceLine',"It's only {price} plus tax.")}\n\n${closingAsk(tier,cls,family,other)}`;
 }
 
 function sayAfterFor(cls,noun,turn,label,warranty){
@@ -1101,10 +1139,10 @@ function screen(o){
 function renderHome(){
   const tile=(id,f,isDevice)=>`<button class="tile" data-${isDevice?'device':'flow'}="${id}" style="--tint:${f.color||f.tint};--tint-soft:${f.tintSoft||'#EEF0F4'}"><span class="ic">${ic(f.icon)}</span><span class="txt"><h3>${esc(f.label)}</h3><p>${esc(f.desc)}</p></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
   const tiles=[tile('computer',FLOWS.computer,false),tile('device',DEVICE_META,true),tile('support',FLOWS.support,false)].join('');
-  const left=sayBlock("Thanks for calling Computer Warriors, this is [name]. Who do I have the pleasure of speaking with?")
-    + noteBlock("Get the customer's name and use it naturally during the call.")
-    + sayBlock("Hey [name], how can we help you today?","Then say")
-    + noteBlock("Ask about the device type, the issue, or whether they need remote / onsite help.");
+  const left=sayBlock(t('greeting.hello',"Thanks for calling Computer Warriors, this is [name]. Who do I have the pleasure of speaking with?"))
+    + noteBlock(t('greeting.note1',"Get the customer's name and use it naturally during the call."))
+    + sayBlock(t('greeting.help',"Hey [name], how can we help you today?"),"Then say")
+    + noteBlock(t('greeting.note2',"Ask about the device type, the issue, or whether they need remote / onsite help."));
   const right=`<div class="pane-title">What's the call about?</div><div class="pane-sub">Pick the closest match \u2014 switch anytime with Home.</div><div class="tiles">${tiles}</div>`;
   stage.innerHTML=screen({home:true,accent:'var(--accent)',eyebrow:"Every call starts here",title:"Greet the caller",left,right});
   stage.querySelectorAll('.tile').forEach(t=>t.onclick=()=> t.dataset.device ? startDevice() : startFlow(t.dataset.flow));
@@ -1117,9 +1155,9 @@ function renderInfo(){
     <div class="flowbar"><button class="back" id="backBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag">Quick info</span></div>
     <div class="panel"><div class="panel-body">
       <div class="eyebrow">Hours &amp; locations</div>
-      <h2 class="step-title">${esc(SHOP.hours)}</h2>
+      <h2 class="step-title">${esc(t('shop.hours',SHOP.hours))}</h2>
       <p class="step-sub">Walk-ins welcome — or book a set time below.</p>
-      ${loc(SHOP.wilmington)}${loc(SHOP.jacksonville)}
+      ${loc({name:t('shop.wilmingtonName',SHOP.wilmington.name),addr:t('shop.wilmingtonAddr',SHOP.wilmington.addr),near:t('shop.wilmingtonNear',SHOP.wilmington.near)})}${loc({name:t('shop.jacksonvilleName',SHOP.jacksonville.name),addr:t('shop.jacksonvilleAddr',SHOP.jacksonville.addr),near:t('shop.jacksonvilleNear',SHOP.jacksonville.near)})}
       <div class="appt-cta">
         <button class="btn-primary" id="apptBtn">${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')} Book an in-store appointment</button>
         <span class="hint">Opens the online scheduler — great for a customer who wants a set drop-off time.</span>
@@ -1343,16 +1381,17 @@ function renderStep(){
   if(total>1) flowbar+=`<span class="steptrack">Step ${state.idx+1} / ${total}</span>`;
   flowbar+=`</div>`;
 
-  // LEFT = what to say/read
+  // LEFT = what to say/read  (script text is admin-overridable by flow+step id)
+  const sk = 'flow.'+state.flowId+'.'+step.id;
   let left='';
-  if(step.say) left+=sayBlock(step.say);
-  if(step.note) left+=noteBlock(step.note,step.warn);
+  if(step.say) left+=sayBlock(t(sk+'.say', step.say));
+  if(step.note) left+=noteBlock(t(sk+'.note', step.note),step.warn);
   if(step.close) left+=apptCtaLeft();
 
   // RIGHT = what to do
   let right='';
   if(step.embed) right+=embedBlock(step.embed);
-  if(step.sayAfterEmbed) right+=sayBlock(step.sayAfterEmbed,"Once submitted, say");
+  if(step.sayAfterEmbed) right+=sayBlock(t(sk+'.sayAfterEmbed', step.sayAfterEmbed),"Once submitted, say");
   if(step.extras) right+=extrasBlock(step.extras);
   if(step.sections){ right+=`<div class="sec-lbl">Pricing &amp; coverage</div>`+step.sections.map(sectionBlock).join(''); }
   if(step.choices) right+=choicesBlock(step.choices);
@@ -1439,12 +1478,179 @@ function goNext(id){
   renderStep();
 }
 
+/* =========================================================================
+   ADMIN PANEL — open at #admin, unlock with the code, edit scripts (no-code).
+   Saves to /api/config (n8n); the PIN is verified server-side.
+   ========================================================================= */
+function rerenderCurrent(){
+  if(document.getElementById('cwAdmin')) return;
+  if(!state) renderHome();
+  else if(state.mode==="device"&&state.dr) renderDevice(state.dr);
+  else renderStep();
+}
+
+const ADMIN_SCHEMA = [
+  { title:'Greeting', fields:[
+    {k:'greeting.hello',l:'Greeting — first line'},{k:'greeting.note1',l:'Greeting — note'},
+    {k:'greeting.help',l:'Greeting — then say'},{k:'greeting.note2',l:'Greeting — second note'} ]},
+  { title:'Computer Repair', fields:[
+    {k:'flow.computer.issue.say',l:'Issue step — say'},{k:'flow.computer.sw.say',l:'Software issue — script'},
+    {k:'flow.computer.hw.say',l:'Hardware issue — script'},{k:'flow.computer.hw.note',l:'Hardware — note'},
+    {k:'flow.computer.ns.say',l:'Not sure — script'},{k:'flow.computer.ns.note',l:'Not sure — note'} ]},
+  { title:'SOHO / Support', fields:[
+    {k:'flow.support.business.say',l:'Managed IT — say'},{k:'flow.support.business.note',l:'Managed IT — note'},
+    {k:'flow.support.soho.sayAfterEmbed',l:'SOHO — after submit'} ]},
+  { title:'Closing the call', fields:[
+    {k:'close.beforeLocated',l:'Before you head over'},{k:'close.locationNote',l:'Location note'},
+    {k:'close.lookForward',l:'Look-forward line'},{k:'close.signoff',l:'Sign-off'} ]},
+  { title:'Objections', fields:[
+    {k:'obj.intro',l:'Objection intro'},{k:'obj.timing',l:'Timing response'},{k:'obj.price',l:'Price response'},
+    {k:'obj.shopping',l:'Shopping-around response'},{k:'obj.priorityNote',l:'Priority pricing note'},
+    {k:'obj.financeNote',l:'Financing note'},{k:'obj.computerSub',l:'Computer objections subtitle'},
+    {k:'obj.computerPriorityNote',l:'Computer priority note'},{k:'obj.deviceSub',l:'Device objections subtitle'} ]},
+  { title:'Closing question (device)', fields:[
+    {k:'ask.console',l:'Console'},{k:'ask.tablet',l:'iPad / tablet'},{k:'ask.phoneOther',l:'Phone (Other Device)'},
+    {k:'ask.phoneInStock',l:'Phone — in stock'},{k:'ask.phoneOrder',l:'Phone — special order'} ]},
+  { title:'Warranty lines (price scripts)', fields:[
+    {k:'benefit.screen',l:'Screen'},{k:'benefit.battery',l:'Battery'},{k:'benefit.charging',l:'Charging port'},
+    {k:'benefit.backglass',l:'Back glass'},{k:'benefit.hdmi',l:'HDMI'},{k:'benefit.cleaning',l:'Cleaning (no part)'},
+    {k:'benefit.other',l:'Default'},{k:'benefit.console',l:'Console'} ]},
+  { title:'Turnaround lines (price scripts)', note:'Keep the {noun}, {part} and {Nouns} tags — they fill in automatically.', fields:[
+    {k:'turn.backglass',l:'Back glass — order'},{k:'turn.charging',l:'Charging port — order'},
+    {k:'turn.instockScreen',l:'Screen — in stock'},{k:'turn.instockBattery',l:'Battery — in stock'},
+    {k:'turn.instockOther',l:'Other — in stock'},{k:'turn.tier2Battery',l:'Order battery (a few days)'},
+    {k:'turn.tier2Other',l:'Order part (overnight)'},{k:'turn.queueTablet',l:'iPad/tablet queue'},
+    {k:'turn.queueConsole',l:'Console queue'},{k:'priceLine',l:'Price line (keep {price})'} ]},
+  { title:'Shop info', fields:[
+    {k:'shop.hours',l:'Hours'},{k:'shop.wilmingtonName',l:'Wilmington — name'},{k:'shop.wilmingtonAddr',l:'Wilmington — address'},
+    {k:'shop.wilmingtonNear',l:'Wilmington — directions'},{k:'shop.jacksonvilleName',l:'Jacksonville — name'},
+    {k:'shop.jacksonvilleAddr',l:'Jacksonville — address'},{k:'shop.jacksonvilleNear',l:'Jacksonville — directions'} ]},
+  { title:'Coverage wording', fields:[
+    {k:'cov.screen',l:'Screen coverage'},{k:'cov.battery',l:'Battery coverage'},{k:'cov.lifetime',l:'Lifetime coverage'},
+    {k:'cov.consoleHw',l:'Console hardware'},{k:'cov.cleaning',l:'Cleaning'} ]}
+];
+
+// Populate DEF with every default so the editor can show + reset them.
+function primeDefaults(){
+  const P=(k,v)=>{ if(v!==undefined && DEF[k]===undefined) DEF[k]=v; };
+  P('greeting.hello',"Thanks for calling Computer Warriors, this is [name]. Who do I have the pleasure of speaking with?");
+  P('greeting.note1',"Get the customer's name and use it naturally during the call.");
+  P('greeting.help',"Hey [name], how can we help you today?");
+  P('greeting.note2',"Ask about the device type, the issue, or whether they need remote / onsite help.");
+  FLOWS.computer.steps.forEach(s=>{ P('flow.computer.'+s.id+'.say',s.say); P('flow.computer.'+s.id+'.note',s.note); });
+  FLOWS.support.steps.forEach(s=>{ P('flow.support.'+s.id+'.say',s.say); P('flow.support.'+s.id+'.note',s.note); P('flow.support.'+s.id+'.sayAfterEmbed',s.sayAfterEmbed); });
+  P('shop.hours',SHOP.hours);
+  P('shop.wilmingtonName',SHOP.wilmington.name); P('shop.wilmingtonAddr',SHOP.wilmington.addr); P('shop.wilmingtonNear',SHOP.wilmington.near);
+  P('shop.jacksonvilleName',SHOP.jacksonville.name); P('shop.jacksonvilleAddr',SHOP.jacksonville.addr); P('shop.jacksonvilleNear',SHOP.jacksonville.near);
+  try{ ['screen','battery','charging','backglass','hdmi','cleaning','other','console'].forEach(c=>benefitLine(c,'phone'));
+    tierScript('1','screen','iPhone','phone'); tierScript('1','battery','iPhone','phone'); tierScript('1','charging','iPhone','phone');
+    tierScript('1','backglass','iPhone','phone'); tierScript('1','other','iPhone','phone'); tierScript('2','battery','Samsung','phone'); tierScript('2','other','Samsung','phone');
+    tierScript('3a','screen','iPad','tablet'); tierScript('3b','cleaning','console','console'); tierScript('3b','other','console','console');
+    closingAsk('1','screen','phone',false); closingAsk('1','charging','phone',false); closingAsk('3a','x','tablet',false);
+    closingAsk('3b','x','console',false); closingAsk('2','x','phone',true);
+    objectionBlock(); signoffBlock(false); computerCloseCards(); computerObjections(); deviceObjections();
+    ['Screen','Battery','Cleaning / Overheating','Charging Port'].forEach(cat=>{ coverageFor('Phone',cat); coverageFor('Console',cat); });
+  }catch(e){}
+}
+
+const ADMIN_CSS = `<style>
+#cwAdmin .cwa-wrap{position:fixed;inset:0;z-index:9999;background:rgba(17,23,33,.55);display:flex;align-items:center;justify-content:center;padding:18px;font-family:var(--body)}
+#cwAdmin .cwa-card{background:#fff;border-radius:16px;box-shadow:var(--sh-3);padding:26px;width:100%;max-width:360px}
+#cwAdmin .cwa-h{font-family:var(--disp);font-size:19px;font-weight:700;margin-bottom:14px}
+#cwAdmin .cwa-pin{width:100%;box-sizing:border-box;font-size:18px;letter-spacing:3px;text-align:center;padding:12px;border:1.5px solid var(--line);border-radius:10px;outline:none}
+#cwAdmin .cwa-pin:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,138,32,.16)}
+#cwAdmin .cwa-err{color:var(--alert);font-size:13px;min-height:18px;margin:8px 2px}
+#cwAdmin .cwa-row{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+#cwAdmin .cwa-btn{background:linear-gradient(180deg,#F0A03A,var(--accent));color:#241202;border:none;border-radius:10px;padding:11px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--body)}
+#cwAdmin .cwa-btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--muted);font-weight:600}
+#cwAdmin .cwa-panel{background:var(--paper);border-radius:16px;box-shadow:var(--sh-3);width:100%;max-width:800px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+#cwAdmin .cwa-top{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;background:#fff;border-bottom:1px solid var(--line)}
+#cwAdmin .cwa-title{font-family:var(--disp);font-size:18px;font-weight:700}
+#cwAdmin .cwa-body{overflow-y:auto;padding:18px 22px}
+#cwAdmin .cwa-group{margin-bottom:22px}
+#cwAdmin .cwa-gh{font-family:var(--disp);font-size:13px;font-weight:700;color:var(--accent-deep);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+#cwAdmin .cwa-gnote{font-size:12px;color:var(--faint);margin-bottom:10px}
+#cwAdmin .cwa-field{margin-bottom:12px}
+#cwAdmin .cwa-field label{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:4px}
+#cwAdmin .cwa-reset{background:none;border:none;color:var(--faint);font-size:11px;cursor:pointer;text-decoration:underline}
+#cwAdmin textarea{width:100%;box-sizing:border-box;font-family:var(--body);font-size:13.5px;line-height:1.5;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;resize:vertical;outline:none}
+#cwAdmin textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,138,32,.14)}
+#cwAdmin .cwa-save{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:14px 22px;background:#fff;border-top:1px solid var(--line)}
+#cwAdmin .cwa-status{font-size:13px;color:var(--muted)}
+#cwAdmin .cwa-status.ok{color:var(--good)} #cwAdmin .cwa-status.err{color:var(--alert)}
+</style>`;
+
+function openAdmin(){
+  primeDefaults();
+  let el = document.getElementById('cwAdmin');
+  if(!el){ el = document.createElement('div'); el.id='cwAdmin'; document.body.appendChild(el); }
+  el.innerHTML = ADMIN_CSS + `<div class="cwa-wrap"><div class="cwa-card">
+    <div class="cwa-h">Admin — enter code</div>
+    <input type="password" id="cwaPin" class="cwa-pin" placeholder="Code" autocomplete="off" inputmode="numeric">
+    <div class="cwa-err" id="cwaGateErr"></div>
+    <div class="cwa-row"><button class="cwa-btn ghost" id="cwaCancel">Cancel</button><button class="cwa-btn" id="cwaUnlock">Unlock</button></div>
+  </div></div>`;
+  el.querySelector('#cwaCancel').onclick=closeAdmin;
+  const go=()=>adminUnlock(el);
+  el.querySelector('#cwaUnlock').onclick=go;
+  const pin=el.querySelector('#cwaPin'); pin.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); }); setTimeout(()=>pin.focus(),50);
+}
+function closeAdmin(){
+  const el=document.getElementById('cwAdmin'); if(el) el.remove();
+  if(location.hash==='#admin') history.replaceState(null,'',location.pathname+location.search);
+  rerenderCurrent();
+}
+async function adminUnlock(el){
+  const pin = el.querySelector('#cwaPin').value;
+  const errEl = el.querySelector('#cwaGateErr'); errEl.textContent='Checking…';
+  try{
+    const r = await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin, config: ADMIN_CFG})});
+    const d = await r.json();
+    if(d && d.ok) renderAdminEditor(el, pin);
+    else errEl.textContent = (d && d.error==='invalid_pin') ? 'Incorrect code.' : 'Could not verify — try again.';
+  }catch(e){ errEl.textContent='Network error.'; }
+}
+function renderAdminEditor(el, pin){
+  const groups = ADMIN_SCHEMA.map(g=>{
+    const fields = g.fields.map(f=>{
+      const cur = ov(f.k)!=null ? ov(f.k) : (DEF[f.k]||'');
+      const rows = Math.min(9, Math.max(2, Math.ceil((String(cur).length||20)/58)));
+      return `<div class="cwa-field"><label>${esc(f.l)}<button class="cwa-reset" data-reset="${esc(f.k)}">reset</button></label>`
+        + `<textarea data-k="${esc(f.k)}" rows="${rows}">${esc(cur)}</textarea></div>`;
+    }).join('');
+    return `<div class="cwa-group"><div class="cwa-gh">${esc(g.title)}</div>${g.note?`<div class="cwa-gnote">${esc(g.note)}</div>`:''}${fields}</div>`;
+  }).join('');
+  el.innerHTML = ADMIN_CSS + `<div class="cwa-wrap"><div class="cwa-panel">
+    <div class="cwa-top"><div class="cwa-title">Edit call scripts</div><button class="cwa-btn ghost" id="cwaClose">Close</button></div>
+    <div class="cwa-body">${groups}</div>
+    <div class="cwa-save"><span class="cwa-status" id="cwaStatus"></span><button class="cwa-btn" id="cwaSave">Save changes</button></div>
+  </div></div>`;
+  el.querySelector('#cwaClose').onclick=closeAdmin;
+  el.querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{ const ta=el.querySelector('textarea[data-k="'+b.dataset.reset+'"]'); if(ta) ta.value = DEF[b.dataset.reset]||''; });
+  el.querySelector('#cwaSave').onclick=()=>saveAdmin(el, pin);
+}
+async function saveAdmin(el, pin){
+  const status = el.querySelector('#cwaStatus'); status.textContent='Saving…'; status.className='cwa-status';
+  const config = {};
+  el.querySelectorAll('textarea[data-k]').forEach(ta=>{
+    const k=ta.dataset.k, v=ta.value;
+    if(v !== (DEF[k]||'')) deepSet(config, k, v);
+  });
+  try{
+    const r = await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin, config})});
+    const d = await r.json();
+    if(d && d.ok){ ADMIN_CFG = config; status.textContent='Saved — scripts updated on every device.'; status.className='cwa-status ok'; }
+    else { status.textContent = (d && d.error==='invalid_pin') ? 'Incorrect code — not saved.' : 'Save failed — try again.'; status.className='cwa-status err'; }
+  }catch(e){ status.textContent='Network error — not saved.'; status.className='cwa-status err'; }
+}
+
 new MutationObserver(scheduleFit).observe(stage,{childList:true,subtree:true});
 window.addEventListener('resize',scheduleFit);
 document.getElementById('homeBtn').onclick=goHome;
 document.getElementById('infoBtn').onclick=renderInfo;
+window.addEventListener('hashchange',()=>{ if(location.hash==='#admin') openAdmin(); });
 goHome();
-loadPricing().then(()=>{ if(state){ if(state.mode==="device"&&state.dr) renderDevice(state.dr); else renderStep(); } });
+Promise.all([loadAdminConfig(), loadPricing()]).then(()=>{ rerenderCurrent(); if(location.hash==='#admin') openAdmin(); });
 </script>
 </body>
 </html>
