@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-08-03T10:00:03.470Z",
+  "_generated": "2026-08-10T10:00:03.233Z",
   "_warranty": {
     "screen": "Lifetime warranty on parts and labor, plus one free re-repair if the screen cracks again within 12 months.",
     "screenLine": "Premium-grade display, color-matched and touch-tested. Covered for life against defects — and if it cracks again within 12 months, we'll repair it once for free.",
@@ -13,7 +13,7 @@
     "models": {
       "iPhone 17 Pro Max": {
         "Screen Repair": {
-          "price": 319.95,
+          "price": 259.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -31,7 +31,7 @@
       },
       "iPhone 17 Pro": {
         "Screen Repair": {
-          "price": 269.95,
+          "price": 229.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -49,7 +49,7 @@
       },
       "iPhone 17": {
         "Screen Repair": {
-          "price": 259.95,
+          "price": 229.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -85,7 +85,7 @@
       },
       "iPhone 16 Pro Max": {
         "Screen Repair": {
-          "price": 299.95,
+          "price": 259.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -103,11 +103,11 @@
       },
       "iPhone 16 Pro": {
         "Screen Repair": {
-          "price": 249.95,
+          "price": 219.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 159.95,
+          "price": 119.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -517,7 +517,7 @@
       },
       "iPhone Air": {
         "Screen Repair": {
-          "price": 409.95,
+          "price": 249.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -630,23 +630,9 @@
           "warranty": "Lifetime warranty"
         }
       },
-      "iPad 7 (2019)": {
-        "Screen Repair": {
-          "price": 164.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 159.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 189.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
       "iPad Air 13\" (2026)": {
         "Screen Repair": {
-          "price": 829.95,
+          "price": 394.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -810,7 +796,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 349.95,
+          "price": 219.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -838,7 +824,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 349.95,
+          "price": 219.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -848,7 +834,7 @@
       },
       "iPad Pro 11\" 5th Gen (2024)": {
         "Screen Repair": {
-          "price": 939.95,
+          "price": 919.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -918,7 +904,7 @@
       },
       "iPad Pro 12.9\" 4th Gen (2020)": {
         "Screen Repair": {
-          "price": 349.95,
+          "price": 354.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -946,7 +932,7 @@
       },
       "iPad Pro 12.9\" 3rd Gen (2018)": {
         "Screen Repair": {
-          "price": 349.95,
+          "price": 354.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -983,7 +969,7 @@
           "warranty": "Lifetime warranty"
         },
         "Charging Port Repair": {
-          "price": 119.95,
+          "price": 129.95,
           "warranty": "Lifetime warranty"
         },
         "Back Glass / Back Cover": {
@@ -1033,7 +1019,7 @@
           "warranty": "Lifetime warranty"
         },
         "Back Glass / Back Cover": {
-          "price": 169.95,
+          "price": 159.95,
           "warranty": "Lifetime warranty"
         }
       },
@@ -1059,6 +1045,10 @@
         "Screen Repair": {
           "price": 479.95,
           "warranty": "Lifetime warranty"
+        },
+        "Battery Repair": {
+          "price": 109.95,
+          "warranty": "1-year warranty"
         },
         "Back Glass / Back Cover": {
           "price": 169.95,
@@ -1237,79 +1227,7 @@
           "warranty": "Lifetime warranty"
         },
         "Back Glass / Back Cover": {
-          "price": 149.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
-      "Galaxy S22 Ultra": {
-        "Screen Repair": {
-          "price": 424.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 129.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 119.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Back Glass / Back Cover": {
-          "price": 169.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
-      "Galaxy S22 Plus": {
-        "Screen Repair": {
-          "price": 319.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 109.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 119.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Back Glass / Back Cover": {
-          "price": 149.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
-      "Galaxy S22": {
-        "Screen Repair": {
-          "price": 309.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 129.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 119.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Back Glass / Back Cover": {
-          "price": 159.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
-      "Galaxy S21 FE": {
-        "Screen Repair": {
-          "price": 269.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 129.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 119.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Back Glass / Back Cover": {
-          "price": 129.95,
+          "price": 139.95,
           "warranty": "Lifetime warranty"
         }
       }
@@ -1532,56 +1450,6 @@
           "warranty": "Lifetime warranty"
         }
       },
-      "Pixel 7 Pro": {
-        "Screen Repair": {
-          "price": 539.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 149.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 189.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Back Glass / Rear Housing": {
-          "price": 369.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
-      "Pixel 7a": {
-        "Screen Repair": {
-          "price": 289.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 129.95,
-          "warranty": "1-year warranty"
-        },
-        "Back Glass / Rear Housing": {
-          "price": 149.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
-      "Pixel 7": {
-        "Screen Repair": {
-          "price": 289.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 149.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 189.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Back Glass / Rear Housing": {
-          "price": 339.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
       "Pixel 6 Pro": {
         "Screen Repair": {
           "price": 509.95,
@@ -1597,42 +1465,6 @@
         },
         "Back Glass / Rear Housing": {
           "price": 299.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
-      "Pixel 6A": {
-        "Screen Repair": {
-          "price": 259.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 129.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 189.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Back Glass / Rear Housing": {
-          "price": 199.95,
-          "warranty": "Lifetime warranty"
-        }
-      },
-      "Pixel 6": {
-        "Screen Repair": {
-          "price": 309.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Battery Repair": {
-          "price": 149.95,
-          "warranty": "1-year warranty"
-        },
-        "Charging Port Repair": {
-          "price": 189.95,
-          "warranty": "Lifetime warranty"
-        },
-        "Back Glass / Rear Housing": {
-          "price": 319.95,
           "warranty": "Lifetime warranty"
         }
       },
