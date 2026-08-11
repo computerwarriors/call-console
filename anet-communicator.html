@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IFrame Communicator</title>
+<!--
+  Authorize.Net Accept Customer iframe communicator.
+
+  The hosted "add payment method" page (accept.authorize.net, embedded in an
+  iframe by the Call Console) loads THIS page in a nested iframe and passes it
+  events via the URL hash / postMessage:
+
+      action=resizeWindow&width=W&height=H
+      action=successfulSave
+      action=cancel
+
+  Because this page is on the Call Console's own origin, it can reach the
+  console window (window.parent.parent) and deliver the event. This is
+  Authorize.Net's documented pattern; no card data ever flows through here —
+  only UI events.
+-->
+</head>
+<body>
+<script>
+(function(){
+  function deliver(qstr){
+    if(!qstr || !qstr.length) return;
+    try {
+      var top = window.parent && window.parent.parent;
+      if(top && top.AuthorizeNetIFrame && typeof top.AuthorizeNetIFrame.onReceiveCommunication === 'function'){
+        top.AuthorizeNetIFrame.onReceiveCommunication(qstr);
+        return;
+      }
+    } catch(e){}
+    // Fallback: postMessage to the console (same origin as this page).
+    try {
+      if(window.parent && window.parent.parent){
+        window.parent.parent.postMessage({ type:'cw-anet', qstr: String(qstr) }, location.origin);
+      }
+    } catch(e){}
+  }
+  function receiveMessage(event){ if(event && event.data) deliver(String(event.data)); }
+  if(window.addEventListener) window.addEventListener('message', receiveMessage, false);
+  else if(window.attachEvent) window.attachEvent('onmessage', receiveMessage);
+  if(window.location.hash && window.location.hash.length > 1) deliver(window.location.hash.substring(1));
+})();
+</script>
+</body>
+</html>

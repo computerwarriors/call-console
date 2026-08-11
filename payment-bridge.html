@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request received — Computer Warriors</title>
+<!--
+  Cognito redirect bridge.
+
+  The SOHO intake form (Cognito, embedded in the Call Console iframe) redirects
+  here after submission with ?request=SOHO-<entry number>. Because this page is
+  on the SAME origin as the Call Console, it can hand the request ID up to the
+  app via postMessage; the console then swaps the intake pane for the live
+  request status (existing-customer confirmation, or the secure card-on-file
+  step for new customers).
+
+  Carries only the opaque request ID — no customer data, no card data.
+  If it's ever opened outside the console (no parent frame), it just shows a
+  friendly confirmation.
+-->
+<style>
+  :root{
+    --paper:#F7F9FB; --ink:#111721; --muted:#5A6472; --line:#DFE4EB;
+    --accent:#E08A20; --good:#1E7A55; --good-soft:#E4F1EB;
+    --body:'Plus Jakarta Sans',system-ui,sans-serif;
+  }
+  html,body{margin:0;height:100%}
+  body{font-family:var(--body);background:var(--paper);color:var(--ink);
+    display:flex;align-items:flex-start;justify-content:center;padding:48px 20px}
+  .card{max-width:420px;text-align:center}
+  .tick{width:52px;height:52px;border-radius:50%;background:var(--good-soft);color:var(--good);
+    display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px}
+  .tick svg{width:26px;height:26px}
+  h1{font-size:19px;font-weight:600;margin:0 0 6px;letter-spacing:-.3px}
+  p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+  .rid{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);margin-top:14px;opacity:.7}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <h1>Request received</h1>
+    <p id="msg">One moment&hellip;</p>
+    <div class="rid" id="rid"></div>
+  </div>
+<script>
+(function(){
+  var requestId = '';
+  try { requestId = new URLSearchParams(location.search).get('request') || ''; } catch(e){}
+  requestId = String(requestId).trim();
+  if(!/^[A-Za-z0-9_-]{1,64}$/.test(requestId)) requestId = '';
+
+  var ridEl = document.getElementById('rid');
+  if(requestId) ridEl.textContent = 'Ref ' + requestId;
+
+  var inFrame = false;
+  try { inFrame = window.parent && window.parent !== window; } catch(e){}
+
+  if(inFrame && requestId){
+    document.getElementById('msg').textContent = 'Loading the next step in the console…';
+    // Same-origin parent (the Call Console). location.origin keeps the message
+    // from ever being delivered to a page on another domain.
+    var send = function(){
+      try { window.parent.postMessage({ type:'cw-intake', requestId: requestId }, location.origin); } catch(e){}
+    };
+    send();
+    // A couple of retries in case the console's listener attaches late.
+    setTimeout(send, 400); setTimeout(send, 1200);
+  } else {
+    document.getElementById('msg').textContent =
+      'Your support request has been submitted. Keep an eye on your email — our team will follow up shortly.';
+  }
+})();
+</script>
+</body>
+</html>

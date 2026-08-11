@@ -289,6 +289,29 @@
   .embed-open{display:block;text-align:center;font-size:12.5px;font-weight:600;color:var(--accent-deep);text-decoration:none;padding:11px;border-top:1px solid var(--line-soft);background:var(--paper-2)}
   .embed-open:hover{background:var(--accent-soft)}
 
+  /* ============ secure payment (SOHO new customer card on file) ============ */
+  .pay-card{border:1.5px solid var(--line);border-radius:12px;background:var(--card);box-shadow:var(--sh-1);padding:20px 22px;margin:2px 0 18px}
+  .pay-card.ok{border-color:#C9E2D5;background:linear-gradient(180deg,#FFFFFF,#FAFDFB)}
+  .pay-eyebrow{font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent-deep);font-weight:600;margin-bottom:9px;display:flex;align-items:center;gap:9px}
+  .pay-eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--accent-line),transparent)}
+  .pay-card.ok .pay-eyebrow{color:var(--good)}
+  .pay-card.ok .pay-eyebrow::after{background:linear-gradient(90deg,#C9E2D5,transparent)}
+  .pay-title{font-family:var(--disp);font-size:19px;font-weight:600;letter-spacing:-.4px;margin:0 0 4px;display:flex;align-items:center;gap:9px}
+  .pay-title .tick{width:24px;height:24px;border-radius:50%;background:var(--good-soft);color:var(--good);flex:none;display:grid;place-items:center}
+  .pay-title .tick svg{width:14px;height:14px}
+  .pay-sub{color:var(--muted);font-size:13.5px;line-height:1.6;margin:0 0 14px}
+  .pay-badge{display:inline-flex;align-items:center;gap:8px;background:var(--good-soft);border:1px solid #C9E2D5;color:#1F4A38;border-radius:9px;padding:8px 14px;font-size:14px;font-weight:600;font-family:var(--mono);margin:0 0 14px}
+  .pay-actions{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;align-items:center}
+  .pay-msg{font-size:13px;color:var(--alert);background:var(--alert-soft);border:1px solid var(--alert-line);border-radius:8px;padding:9px 13px;margin:0 0 14px}
+  .pay-msg.soft{color:#6E4708;background:var(--accent-soft);border-color:var(--accent-line)}
+  .pay-frame{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--sh-1);margin:0 0 12px}
+  .pay-frame iframe{display:block;border:0;width:100%;min-height:420px}
+  .pay-wait{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13.5px;padding:6px 2px}
+  .pay-wait .dotp{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:paypulse 1s ease-in-out infinite}
+  @keyframes paypulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}
+  .pay-fallback{display:block;margin:-8px 0 16px;font-size:12px;color:var(--faint);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;text-align:left}
+  .pay-fallback:hover{color:var(--accent-deep)}
+
   /* ================= appointment cta (info page) ================= */
   .appt-cta{display:flex;flex-direction:column;gap:8px;margin-top:20px}
   .appt-cta .btn-primary{align-self:flex-start}
@@ -556,7 +579,7 @@ const FLOWS = {
           {label:"Project Request",sub:"A defined project \u2014 scoped and quoted",next:"project"},
           {label:"Managed IT Services",sub:"For a business looking for someone to manage their IT",next:"business"}
         ]},
-      { id:"retail", title:"Immediate Retail Need", end:true, checklist:CHECKLIST_SUPPORT,
+      { id:"retail", title:"Immediate Retail Need", end:true, checklist:CHECKLIST_SUPPORT, payment:true,
         embed:{ label:"Retail intake form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/1", height:950, allow:"payment" } },
       { id:"project", title:"Project Request", end:true, checklist:CHECKLIST_SUPPORT,
         embed:{ label:"Project request form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/8", height:804, allow:"payment" } },
@@ -1373,6 +1396,249 @@ function wireApptButtons(back, getUrl){
   });
 }
 
+/* =========================================================================
+   SECURE PAYMENT — SOHO new-customer card on file (Authorize.Net hosted form)
+
+   Flow: the Cognito intake (embedded above) submits to n8n. n8n releases
+   existing customers immediately; NEW customers are held as awaiting_payment.
+   Cognito then redirects its iframe to /payment-bridge.html?request=<id>,
+   which postMessages the opaque request ID up to this app. The app swaps the
+   intake pane for the payment panel, fetches a short-lived Authorize.Net
+   hosted-page token from /api/payment-token, and shows Authorize.Net's own
+   card form in an iframe. After the form reports success, /api/payment-verify
+   confirms with Authorize.Net that a payment profile really exists and only
+   then releases the held support request.
+
+   Card numbers are typed straight into Authorize.Net's page — they never
+   touch this app, the API functions, n8n, or Cognito. The only card info the
+   app ever sees is the masked brand + last 4 that Authorize.Net returns.
+   ========================================================================= */
+const PAY_SS_KEY = 'cw_intake_pending';
+let PAY = null;   // { requestId, stage, customer, card, msg, msgSoft }
+
+function payPersist(){
+  try{
+    if(PAY && PAY.requestId && PAY.stage!=='done') sessionStorage.setItem(PAY_SS_KEY, PAY.requestId);
+    else sessionStorage.removeItem(PAY_SS_KEY);
+  }catch(e){}
+}
+function payWrapEl(){ return document.getElementById('payWrap'); }
+function payActive(){ return !!(PAY && PAY.requestId && PAY.stage!=='done'); }
+
+function payAdopt(requestId){
+  requestId = String(requestId||'').trim();
+  if(!/^[A-Za-z0-9_-]{1,64}$/.test(requestId)) return;
+  if(PAY && PAY.requestId===requestId && PAY.stage!=='status') return;   // already tracking
+  PAY = { requestId, stage:'status' };
+  payPersist();
+  if(payWrapEl()){ payRender(); payRefresh(); }
+}
+
+async function payFetch(url, opts){
+  try{
+    const r = await fetch(url, Object.assign({ headers:{ 'Accept':'application/json', 'Content-Type':'application/json' } }, opts||{}));
+    return await r.json();
+  }catch(e){ return { ok:false, error:'network', detail:String(e&&e.message||e) }; }
+}
+
+async function payRefresh(){
+  if(!PAY) return;
+  const d = await payFetch('/api/support-intake?id='+encodeURIComponent(PAY.requestId));
+  if(!PAY) return;
+  if(!d || !d.ok || !d.status){
+    PAY.stage='error';
+    PAY.msg = (d && d.error==='unknown_request')
+      ? "This request isn't in the system yet. Wait a moment and press Retry."
+      : "Couldn't reach the server. Check the connection and press Retry.";
+  } else {
+    if(d.customer) PAY.customer = d.customer;
+    if(d.status==='awaiting_payment'){ PAY.stage = PAY.stage==='form' ? 'form' : 'ready'; }
+    else if(d.status==='payment_secured' || d.status==='released'){
+      if(d.cardSummary){ PAY.stage='secured'; PAY.card=d.cardSummary; }
+      else PAY.stage='submitted';
+    }
+    else PAY.stage='submitted';
+  }
+  payRender();
+}
+
+async function payToken(){
+  if(!PAY) return;
+  PAY.stage='loading'; PAY.msg=''; payRender();
+  const d = await payFetch('/api/payment-token', { method:'POST', body:JSON.stringify({ requestId:PAY.requestId }) });
+  if(!PAY) return;
+  if(d && d.ok && d.token){
+    PAY.stage='form'; PAY.form={ token:d.token, action:d.action }; payRender();
+  } else if(d && d.error==='not_awaiting'){
+    payRefresh();   // state moved on (already secured / released) — re-sync
+  } else {
+    PAY.stage='ready';
+    PAY.msg = d && d.error==='anet_not_configured'
+      ? 'Payment system is not configured yet — let the admin know (Authorize.Net keys missing).'
+      : "Couldn't open the secure card form. " + (d && d.error ? '('+d.error+') ' : '') + 'Try again in a moment.';
+    payRender();
+  }
+}
+
+async function payVerify(){
+  if(!PAY) return;
+  PAY.stage='verifying'; PAY.msg=''; payRender();
+  const d = await payFetch('/api/payment-verify', { method:'POST', body:JSON.stringify({ requestId:PAY.requestId }) });
+  if(!PAY) return;
+  if(d && d.ok && d.secured){
+    PAY.stage='secured';
+    PAY.card = d.cardSummary || [d.brand, d.last4 ? '•••• '+d.last4 : ''].filter(Boolean).join(' ');
+    payRender();
+  } else if(d && d.ok && !d.secured){
+    PAY.stage='ready';
+    PAY.msg = "The card wasn't saved yet — open the secure form and try again.";
+    payRender();
+  } else if(d && d.error==='release_failed'){
+    PAY.stage='ready';
+    PAY.msgSoft = true;
+    const saved = d.cardSummary || [d.brand, d.last4].filter(Boolean).join(' ');
+    PAY.msg = 'The card WAS saved securely'+(saved?' ('+saved+')':'')+', but releasing the request failed. Press Verify again — do NOT re-enter the card.';
+    payRender();
+  } else {
+    PAY.stage='ready';
+    PAY.msg = "Couldn't confirm the payment method"+(d && d.error ? ' ('+d.error+')' : '')+'. Press Verify to try again.';
+    payRender();
+  }
+}
+
+function payAnetEvent(qstr){
+  const params = {};
+  String(qstr||'').split('&').forEach(kv=>{ const i=kv.indexOf('='); if(i>0) params[decodeURIComponent(kv.slice(0,i))]=decodeURIComponent(kv.slice(i+1)); });
+  const action = params.action||'';
+  if(action==='resizeWindow'){
+    const fr = document.getElementById('anetFrame');
+    const h = parseInt(params.height,10);
+    if(fr && h>0) fr.style.height = Math.min(Math.max(h,320),1400)+'px';
+  } else if(action==='successfulSave'){
+    payVerify();
+  } else if(action==='cancel'){
+    if(PAY){ PAY.stage='ready'; PAY.msgSoft=true; PAY.msg='No card was saved. Open the secure form again when the customer is ready.'; payRender(); }
+  }
+}
+window.AuthorizeNetIFrame = { onReceiveCommunication: q=>payAnetEvent(String(q||'')) };
+window.addEventListener('message', ev=>{
+  if(ev.origin !== location.origin) return;
+  const d = ev.data || {};
+  if(d.type==='cw-intake' && d.requestId) payAdopt(String(d.requestId));
+  else if(d.type==='cw-anet' && d.qstr) payAnetEvent(String(d.qstr));
+});
+
+function payRender(){
+  const wrap = payWrapEl(); if(!wrap) return;
+  const embed = wrap.parentElement ? wrap.parentElement.querySelector('.embed') : null;
+  const fallback = document.getElementById('payFallback');
+  const active = payActive();
+  if(embed) embed.style.display = active ? 'none' : '';
+  if(fallback) fallback.style.display = active ? 'none' : '';
+  if(!active){ wrap.innerHTML=''; return; }
+
+  const msg = PAY.msg ? `<div class="pay-msg${PAY.msgSoft?' soft':''}">${esc(PAY.msg)}</div>` : '';
+  PAY.msgSoft = false;
+  const who = PAY.customer ? `<div class="pay-title">Customer: ${esc(PAY.customer)}</div>` : '';
+  let h = '';
+
+  if(PAY.stage==='status' || PAY.stage==='loading' || PAY.stage==='verifying'){
+    const line = PAY.stage==='verifying' ? 'Confirming the payment method with Authorize.Net…'
+               : PAY.stage==='loading' ? 'Opening the secure card form…'
+               : 'Checking this request…';
+    h = `<div class="pay-card"><div class="pay-eyebrow">Secure payment method</div>${who}
+      <div class="pay-wait"><span class="dotp"></span>${esc(line)}</div></div>`;
+  }
+  else if(PAY.stage==='ready'){
+    h = `<div class="pay-card"><div class="pay-eyebrow">Secure payment method</div>${who}
+      <p class="pay-sub">Support request received. A card on file is <b>required</b> before this new-customer request can be released to the team.</p>
+      ${msg}
+      <p class="pay-sub">The card is entered on Authorize.Net's secure form — card numbers never touch the Call Console, Cognito, or email.</p>
+      <div class="pay-actions">
+        <button class="btn-primary" id="payAddBtn">${ic('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>')} Add Card on File</button>
+        <button class="btn-ghost" id="payVerifyBtn">Verify</button>
+      </div></div>`;
+  }
+  else if(PAY.stage==='form'){
+    h = `<div class="pay-card"><div class="pay-eyebrow">Secure payment method</div>${who}
+      <p class="pay-sub">Read the card details from the caller and enter them below. This form is served by <b>Authorize.Net</b> — the numbers go straight to their vault.</p>
+      ${msg}
+      <div class="pay-frame"><iframe id="anetFrame" name="anetFrame" title="Authorize.Net secure payment form" allow="payment"></iframe></div>
+      <div class="pay-actions"><button class="btn-ghost" id="payCancelBtn">Cancel — back without saving</button></div></div>`;
+  }
+  else if(PAY.stage==='secured'){
+    h = `<div class="pay-card ok"><div class="pay-eyebrow">Secure payment method</div>
+      <div class="pay-title"><span class="tick">${ic('<path d="M20 6 9 17l-5-5"/>')}</span>Payment Method Secured</div>
+      ${PAY.card ? `<div class="pay-badge">${esc(PAY.card)}</div>` : ''}
+      <p class="pay-sub">Request released and ready for dispatch. Billing will charge the stored card from Authorize.Net once the work is completed.</p>
+      <div class="pay-actions"><button class="btn-primary" id="payFinishBtn">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish</button></div></div>`;
+  }
+  else if(PAY.stage==='submitted'){
+    h = `<div class="pay-card ok"><div class="pay-eyebrow">Support request</div>
+      <div class="pay-title"><span class="tick">${ic('<path d="M20 6 9 17l-5-5"/>')}</span>Request submitted</div>
+      <p class="pay-sub">Existing customer — the request went straight through to the normal workflow. Nothing else is needed here.</p>
+      <div class="pay-actions"><button class="btn-primary" id="payFinishBtn">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish</button></div></div>`;
+  }
+  else { // error
+    h = `<div class="pay-card"><div class="pay-eyebrow">Secure payment method</div>${who}
+      ${msg||'<div class="pay-msg">Something went wrong.</div>'}
+      <div class="pay-actions"><button class="btn-primary" id="payRetryBtn">Retry</button>
+      <button class="btn-ghost" id="payDismissBtn">Back to the form</button></div></div>`;
+  }
+
+  wrap.innerHTML = h;
+  const on=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  on('payAddBtn', payToken);
+  on('payVerifyBtn', payVerify);
+  on('payCancelBtn', ()=>{ PAY.stage='ready'; PAY.msgSoft=true; PAY.msg='No card was saved.'; payRender(); });
+  on('payRetryBtn', ()=>{ PAY.stage='status'; payRender(); payRefresh(); });
+  on('payDismissBtn', ()=>{ PAY=null; payPersist(); payRender(); });
+  on('payFinishBtn', ()=>{ PAY={stage:'done'}; PAY=null; try{sessionStorage.removeItem(PAY_SS_KEY);}catch(e){} goHome(); });
+
+  if(PAY.stage==='form' && PAY.form && PAY.form.token){
+    // POST the short-lived token into the iframe (Authorize.Net's documented
+    // pattern). The token is single-purpose and expires in ~15 minutes.
+    const f = document.createElement('form');
+    f.method='post'; f.action=PAY.form.action; f.target='anetFrame'; f.style.display='none';
+    const inp = document.createElement('input');
+    inp.type='hidden'; inp.name='token'; inp.value=PAY.form.token;
+    f.appendChild(inp); document.body.appendChild(f);
+    f.submit(); setTimeout(()=>{ try{f.remove();}catch(e){} },0);
+    PAY.form = null;   // one-shot; a retry fetches a fresh token
+  }
+  scheduleFit();
+}
+
+async function payLoadLatest(){
+  const fb = document.getElementById('payFallback');
+  if(fb){ fb.textContent = 'Checking for a pending payment request…'; }
+  const d = await payFetch('/api/support-intake?latest=1');
+  if(d && d.ok && d.requestId){ payAdopt(d.requestId); }
+  else if(fb){ fb.textContent = 'No pending payment request found — tap to check again'; }
+}
+
+function wireSupportIntake(){
+  const pane = stage.querySelector('.pane-choices'); if(!pane) return;
+  if(!document.getElementById('payWrap')){
+    const wrap = document.createElement('div'); wrap.id='payWrap';
+    pane.insertBefore(wrap, pane.firstChild);
+  }
+  if(!document.getElementById('payFallback')){
+    const fb = document.createElement('button'); fb.id='payFallback'; fb.type='button';
+    fb.className='pay-fallback';
+    fb.textContent = 'Submitted a new customer but no payment step appeared? Tap to load it';
+    fb.onclick = payLoadLatest;
+    const embed = pane.querySelector('.embed');
+    if(embed && embed.nextSibling) pane.insertBefore(fb, embed.nextSibling);
+    else pane.appendChild(fb);
+  }
+  if(!payActive()){
+    let saved=''; try{ saved = sessionStorage.getItem(PAY_SS_KEY)||''; }catch(e){}
+    if(saved) PAY = { requestId:saved, stage:'status' };
+  }
+  if(payActive()){ payRender(); if(PAY.stage==='status') payRefresh(); }
+}
+
 function startFlow(id){ state={flowId:id,idx:0,actions:new Set()}; history=[]; renderStep(); }
 
 function renderStep(){
@@ -1409,6 +1675,7 @@ function renderStep(){
 
   stage.innerHTML=screen({flowbar,accent:flow.color,accentSoft:flow.tintSoft,title:esc(step.title),sub:step.sub?esc(step.sub):'',left,right,full,footer});
   wireStep(step);
+  if(step.payment) wireSupportIntake();
 }
 
 function wireStep(step){
