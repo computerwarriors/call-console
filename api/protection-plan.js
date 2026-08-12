@@ -25,6 +25,32 @@
 
 const anet = require("./_anet.js");
 
+// n8n workflow that links the Authorize.Net profile into RepairShopr
+// (payment_profiles "Manual CIM" record) so recurring invoices charge the
+// newest card. Gated by the same shared secret as the intake webhooks.
+const N8N_PP_SYNC_URL = process.env.N8N_PP_SYNC_URL ||
+  "https://thecomputerwarriors.app.n8n.cloud/webhook/cw-pp-rs-sync";
+
+// Run fn over items with bounded concurrency (used for the profile sweep).
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let i = 0;
+  async function worker() {
+    while (i < items.length) { const idx = i++; out[idx] = await fn(items[idx], idx); }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) || 1 }, worker));
+  return out;
+}
+
+async function fetchJson(url, opts) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(url, Object.assign({ signal: ctrl.signal }, opts || {}));
+    return await r.json().catch(() => null);
+  } finally { clearTimeout(timer); }
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") { res.status(405).json({ ok: false, error: "method_not_allowed" }); return; }
@@ -88,9 +114,89 @@ module.exports = async (req, res) => {
       return;
     }
 
+    if (action === "sync") {
+      // Push the newest Authorize.Net payment method into RepairShopr so
+      // recurring invoices charge it. Called by the console after a save.
+      const found = await anet.getCustomerProfileByEmail({ email });
+      if (!found.ok) { res.status(200).json({ ok: false, error: found.error, detail: found.detail }); return; }
+      if (!found.found || !(found.cards || []).length) { res.status(200).json({ ok: false, error: "no_payment_method" }); return; }
+      const newest = found.cards[found.cards.length - 1];
+      let expiration = "";
+      const m = String(newest.expiration || "").match(/^(\d{4})-(\d{2})$/);
+      if (m) expiration = m[2] + "/" + m[1].slice(2);
+      const rs = await fetchJson(N8N_PP_SYNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          syncKey: process.env.INTAKE_SYNC_KEY || "",
+          email,
+          customerExternalId: found.customerProfileId,
+          paymentProfileId: newest.paymentProfileId,
+          lastFour: newest.last4 || "",
+          expiration
+        })
+      });
+      if (!rs) { res.status(200).json({ ok: false, error: "rs_sync_unreachable" }); return; }
+      res.status(200).json({
+        ok: !!rs.ok,
+        error: rs.ok ? null : (rs.error || "rs_sync_failed"),
+        customerId: rs.customerId || null,
+        created: !!rs.created,
+        updated: rs.updated || 0
+      });
+      return;
+    }
+
+    if (action === "duplicates") {
+      // get-by-email refused (several profiles share the email) — sweep the
+      // account's profile IDs and return every profile matching this email so
+      // the console can offer a keep-one/delete-rest resolution.
+      const idsRes = await anet.getCustomerProfileIds();
+      if (!idsRes.ok) { res.status(200).json({ ok: false, error: idsRes.error, detail: idsRes.detail }); return; }
+      const ids = idsRes.ids || [];
+      if (ids.length > 1500) { res.status(200).json({ ok: false, error: "too_many_profiles", count: ids.length }); return; }
+      const infos = await mapLimit(ids, 25, id =>
+        anet.getCustomerProfileInfo({ customerProfileId: id }).catch(() => null));
+      const matches = infos.filter(p => p && p.ok && String(p.email || "").toLowerCase() === email);
+      res.status(200).json({
+        ok: true,
+        profiles: matches.map(p => ({
+          profileId: p.profileId,
+          description: p.description,
+          merchantCustomerId: p.merchantCustomerId,
+          cards: p.cards
+        }))
+      });
+      return;
+    }
+
+    if (action === "resolve") {
+      // Keep one profile, delete the listed others. Every deletion target is
+      // re-verified server-side to belong to this email before it is deleted.
+      const keepId = String(body.keepId || "");
+      const deleteIds = Array.isArray(body.deleteIds) ? body.deleteIds.map(String) : [];
+      if (!/^\d{4,}$/.test(keepId) || !deleteIds.length ||
+          deleteIds.some(d => !/^\d{4,}$/.test(d)) || deleteIds.indexOf(keepId) !== -1) {
+        res.status(400).json({ ok: false, error: "bad_request" }); return;
+      }
+      const deleted = [], failed = [];
+      for (const id of deleteIds) {
+        const info = await anet.getCustomerProfileInfo({ customerProfileId: id });
+        if (!info.ok) { failed.push({ id, error: info.error }); continue; }
+        if (String(info.email || "").toLowerCase() !== email) { failed.push({ id, error: "email_mismatch" }); continue; }
+        const del = await anet.deleteCustomerProfile({ customerProfileId: id });
+        if (del.ok) deleted.push(id); else failed.push({ id, error: del.error });
+      }
+      res.status(200).json({ ok: failed.length === 0, deleted, failed });
+      return;
+    }
+
     res.status(400).json({ ok: false, error: "bad_action" });
   } catch (e) {
     const code = (e && e.code) === "anet_not_configured" ? "anet_not_configured" : "server_error";
     res.status(200).json({ ok: false, error: code, detail: String((e && e.message) || e) });
   }
 };
+
+// The duplicate-profile sweep can take longer than the default limit.
+module.exports.config = { maxDuration: 60 };

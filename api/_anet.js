@@ -155,6 +155,61 @@ async function getCustomerProfileByEmail({ email }) {
   };
 }
 
+// Every customer profile ID in the account — used by the duplicate resolver
+// (get-by-email refuses to answer when several profiles share an email).
+async function getCustomerProfileIds() {
+  const res = await anetCall("getCustomerProfileIdsRequest", {
+    merchantAuthentication: merchantAuthentication()
+  });
+  if (!res.ok) return { ok: false, error: res.code || "anet_error", detail: res.text };
+  return { ok: true, ids: (res.json.ids || []).map(String) };
+}
+
+// Minimal profile info by ID (email, description, masked cards) — used to find
+// which profiles share an email when get-by-email reports duplicates.
+async function getCustomerProfileInfo({ customerProfileId }) {
+  const res = await anetCall("getCustomerProfileRequest", {
+    merchantAuthentication: merchantAuthentication(),
+    customerProfileId: String(customerProfileId),
+    includeIssuerInfo: "false"
+  });
+  if (!res.ok) return { ok: false, error: res.code || "anet_error", detail: res.text };
+  const prof = res.json.profile || {};
+  const cards = (prof.paymentProfiles || []).map(p => {
+    const cc = p.payment && p.payment.creditCard;
+    const ba = p.payment && p.payment.bankAccount;
+    let brand = "", last4 = "";
+    if (cc) {
+      brand = cc.cardType || "Card";
+      const m = String(cc.cardNumber || "").match(/(\d{4})\s*$/);
+      last4 = m ? m[1] : "";
+    } else if (ba) {
+      brand = "Bank account";
+      const m = String(ba.accountNumber || "").match(/(\d{4})\s*$/);
+      last4 = m ? m[1] : "";
+    }
+    return { brand, last4 };
+  });
+  return {
+    ok: true,
+    profileId: String(prof.customerProfileId || customerProfileId),
+    email: String(prof.email || ""),
+    description: prof.description || "",
+    merchantCustomerId: String(prof.merchantCustomerId || ""),
+    cards
+  };
+}
+
+// Permanently delete a customer profile and every payment method stored on it.
+async function deleteCustomerProfile({ customerProfileId }) {
+  const res = await anetCall("deleteCustomerProfileRequest", {
+    merchantAuthentication: merchantAuthentication(),
+    customerProfileId: String(customerProfileId)
+  });
+  if (!res.ok) return { ok: false, error: res.code || "anet_error", detail: res.text };
+  return { ok: true };
+}
+
 // Does the profile have at least one stored payment method? Returns the masked
 // summary of the newest one (e.g. brand "Visa", last4 "1111") — never anything
 // more than Authorize.Net's own masked value.
@@ -190,4 +245,4 @@ function requestOrigin(req) {
   return host ? ("https://" + String(host).split(",")[0].trim()) : "";
 }
 
-module.exports = { createCustomerProfile, getHostedProfileToken, getPaymentProfileSummary, getCustomerProfileByEmail, requestOrigin, ANET_ENV };
+module.exports = { createCustomerProfile, getHostedProfileToken, getPaymentProfileSummary, getCustomerProfileByEmail, getCustomerProfileIds, getCustomerProfileInfo, deleteCustomerProfile, requestOrigin, ANET_ENV };
