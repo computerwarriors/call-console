@@ -1592,6 +1592,22 @@ function ppDraw(){
           <button class="btn-ghost" id="ppAgain">Different email</button>
         </div>`;
     }
+  } else if(PP.stage==='dupes'){
+    const rows = PP.dupes.map(p=>{
+      const cards=(p.cards&&p.cards.length)?p.cards.map(c=>(c.brand||'Card')+(c.last4?' ••••'+c.last4:'')).join(', '):'no stored cards';
+      return `<label class="act" style="cursor:pointer;align-items:flex-start">
+        <input type="radio" name="ppKeep" value="${esc(p.profileId)}"${p.profileId===PP.keepId?' checked':''} style="margin-top:4px">
+        <span><b>#${esc(p.profileId)}</b> — ${esc(p.description||'no description')}${p.merchantCustomerId?' · ref '+esc(p.merchantCustomerId):''}<br>
+        <span class="hint">${esc(cards)}</span></span></label>`;
+    }).join('');
+    inner = `<p class="step-sub"><b>${esc(PP.email)}</b> is on <b>${PP.dupes.length}</b> Authorize.Net profiles, so lookups can't pick one. Choose the ONE to keep — the others are <b>permanently deleted</b> from Authorize.Net, along with any cards stored on them.</p>
+      ${msg}
+      <div class="actions-list" style="margin:0 0 16px">${rows}</div>
+      <div class="pay-actions">
+        <button class="btn-primary" id="ppResolveBtn">Keep selected — delete the other ${PP.dupes.length-1}</button>
+        <button class="btn-ghost" id="ppAgain">Cancel</button>
+      </div>
+      <p class="hint" style="margin-top:10px">Tip: keep the profile that automatic billing already uses (usually the one holding a card). After resolving, open the payment manager to confirm the card.</p>`;
   } else if(PP.stage==='frame'){
     inner = `<p class="step-sub"><b>${esc(PP.email)}</b> — read the card details from the caller and enter them below. This page is served by <b>Authorize.Net</b> — card numbers never touch the Call Console.</p>
       ${msg}
@@ -1632,6 +1648,8 @@ function ppDraw(){
   on('ppDone', ppAfterFrame);
   on('ppFinish', ()=>{ PP=null; renderInfo(); });
   on('ppMore', ()=>{ PP.stage='result'; ppDraw(); });
+  on('ppResolveBtn', ppResolve);
+  stage.querySelectorAll('input[name="ppKeep"]').forEach(r=>r.onchange=()=>{ PP.keepId=r.value; });
   const em=document.getElementById('ppEmail');
   if(em){ em.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); ppLookup(); } }); if(!PP.email) setTimeout(()=>em.focus(),40); }
   const pi=document.getElementById('ppPinInp');
@@ -1658,7 +1676,7 @@ async function ppLookup(){
     if(err==='pin_not_configured'){ PP.msg='This tool is not enabled yet — an admin needs to set the PROTECTION_PLAN_PIN environment variable in Vercel.'; }
     else if(err==='pin_required'){ PP.needPin=true; PP.msgSoft=true; PP.msg='Enter the team code to use this tool.'; }
     else if(err==='bad_pin'){ PP.needPin=true; PP.msg="That team code isn't right — try again."; }
-    else if(err==='duplicate_profiles'){ PP.msg='This email is attached to more than one Authorize.Net customer profile, so the lookup can’t pick one. In Authorize.Net → Customer Information Manager, search this email and delete or merge the duplicates, then search again.'; }
+    else if(err==='duplicate_profiles'){ return ppDupes(); }
     else PP.msg='Lookup failed ('+err+'). Try again in a moment.';
     ppDraw(); return;
   }
@@ -1690,6 +1708,44 @@ async function ppAfterFrame(){
   }
   ppDraw();
 }
+// Several Authorize.Net profiles share this email — list them so the team can
+// keep exactly one and delete the rest (a card can't be moved between
+// profiles, so "merge" = keep one, delete the others).
+async function ppDupes(){
+  PP.stage='busy'; PP.busyLine='Finding every profile that uses '+PP.email+'…'; ppDraw();
+  let d=null; try{ d=await ppApi({action:'duplicates', email:PP.email}); }catch(e){}
+  if(!d || !d.ok || !Array.isArray(d.profiles) || d.profiles.length<2){
+    PP.stage='search';
+    if(d && d.error==='too_many_profiles') PP.msg='Too many Authorize.Net profiles to scan from here — clean this email up in Authorize.Net → Manage Customers instead.';
+    else if(d && d.ok) { PP.msgSoft=true; PP.msg='The duplicate seems to have cleared — search again.'; }
+    else PP.msg='Could not list the duplicate profiles'+(d&&d.error?' ('+d.error+')':'')+' — handle it in Authorize.Net → Manage Customers.';
+    ppDraw(); return;
+  }
+  PP.dupes=d.profiles;
+  const withCards=d.profiles.filter(p=>p.cards&&p.cards.length);
+  PP.keepId=(withCards[0]||d.profiles[0]).profileId;
+  PP.stage='dupes'; ppDraw();
+}
+async function ppResolve(){
+  const keep=PP.keepId;
+  const del=PP.dupes.filter(p=>p.profileId!==keep).map(p=>p.profileId);
+  const losingCards=PP.dupes.filter(p=>p.profileId!==keep && p.cards && p.cards.length).length;
+  const warn='Delete '+del.length+' Authorize.Net profile(s) for '+PP.email+'?'
+    +(losingCards?' '+losingCards+' of them still hold a stored card — deleted cards are gone for good.':'')
+    +' This cannot be undone.';
+  if(!window.confirm(warn)) return;
+  PP.stage='busy'; PP.busyLine='Deleting duplicate profiles…'; ppDraw();
+  let d=null; try{ d=await ppApi({action:'resolve', email:PP.email, keepId:keep, deleteIds:del}); }catch(e){}
+  if(!d || (!d.ok && !(d.deleted&&d.deleted.length))){
+    PP.stage='dupes';
+    PP.msg='Could not delete the duplicates'+(d&&d.failed&&d.failed.length?' ('+d.failed.map(f=>f.error).join(', ')+')':'')+' — try again or handle it in Authorize.Net.';
+    ppDraw(); return;
+  }
+  PP.dupes=null;
+  if(d.failed && d.failed.length){ PP.msgSoft=true; PP.msg=d.deleted.length+' deleted, '+d.failed.length+' failed — search again to see where things stand.'; }
+  ppLookup();
+}
+
 function ppAnetEvent(qstr){
   const params={};
   String(qstr||'').split('&').forEach(kv=>{ const i=kv.indexOf('='); if(i>0) params[decodeURIComponent(kv.slice(0,i))]=decodeURIComponent(kv.slice(i+1)); });
