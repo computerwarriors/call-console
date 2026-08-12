@@ -1530,6 +1530,13 @@ window.addEventListener('message', ev=>{
   else if(d.type==='cw-anet' && d.qstr) payAnetEvent(String(d.qstr));
 });
 
+// Abandon the current held request (it stays awaiting_payment in n8n as an
+// audit record) and re-render the step so a fresh Cognito form loads.
+function payStartNew(){
+  PAY=null; try{ sessionStorage.removeItem(PAY_SS_KEY); }catch(e){}
+  if(state && state.flowId){ renderStep(); } else { goHome(); }
+}
+
 function payRender(){
   const wrap = payWrapEl(); if(!wrap) return;
   const embed = wrap.parentElement ? wrap.parentElement.querySelector('.embed') : null;
@@ -1561,6 +1568,7 @@ function payRender(){
       <div class="pay-actions">
         <button class="btn-primary" id="payAddBtn">${ic('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>')} Add Card on File</button>
         <button class="btn-ghost" id="payVerifyBtn">Verify</button>
+        <button class="btn-ghost" id="payNewBtn">Customer declined — start a new request</button>
       </div></div>`;
   }
   else if(PAY.stage==='form'){
@@ -1597,7 +1605,8 @@ function payRender(){
   on('payVerifyBtn', payVerify);
   on('payCancelBtn', ()=>{ PAY.stage='ready'; PAY.msgSoft=true; PAY.msg='No card was saved.'; payRender(); });
   on('payRetryBtn', ()=>{ PAY.stage='status'; payRender(); payRefresh(); });
-  on('payDismissBtn', ()=>{ PAY=null; payPersist(); payRender(); });
+  on('payDismissBtn', payStartNew);
+  on('payNewBtn', payStartNew);
   on('payFinishBtn', ()=>{ PAY={stage:'done'}; PAY=null; try{sessionStorage.removeItem(PAY_SS_KEY);}catch(e){} goHome(); });
 
   if(PAY.stage==='form' && PAY.form && PAY.form.token){
