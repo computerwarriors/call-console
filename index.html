@@ -1537,6 +1537,31 @@ function payStartNew(){
   if(state && state.flowId){ renderStep(); } else { goHome(); }
 }
 
+// Business check: release without a card, gated by a mandatory note that the
+// dispatching team reviews (Autotask billing note + Teams alert) before dispatch.
+async function payCheckSubmit(){
+  const t=document.getElementById('payCheckNote');
+  const note=(t?t.value:'').trim();
+  PAY.checkNote=note;
+  if(note.length<10){ PAY.msg='Add a short note first (at least 10 characters) — the dispatching team reads this to approve check payment.'; payRender(); return; }
+  if(!window.confirm('Release WITHOUT a card on file? Dispatch will hold this request until the dispatching team approves business-check payment.')) return;
+  PAY.stage='status'; PAY.msg=''; payRender();
+  let d=null;
+  try{
+    const r=await fetch('/api/payment-bypass',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:PAY.requestId,note})});
+    d=await r.json();
+  }catch(e){}
+  if(d && d.ok){
+    PAY={stage:'checkdone'};
+    try{ sessionStorage.removeItem(PAY_SS_KEY); }catch(e){}
+    payRender();
+  } else {
+    PAY.stage='check';
+    PAY.msg='Could not submit'+(d&&d.error?' ('+d.error+')':'')+'. Try again.';
+    payRender();
+  }
+}
+
 function payRender(){
   const wrap = payWrapEl(); if(!wrap) return;
   const embed = wrap.parentElement ? wrap.parentElement.querySelector('.embed') : null;
@@ -1568,6 +1593,7 @@ function payRender(){
       <div class="pay-actions">
         <button class="btn-primary" id="payAddBtn">${ic('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>')} Add Card on File</button>
         <button class="btn-ghost" id="payVerifyBtn">Verify</button>
+        <button class="btn-ghost" id="payCheckBtn">Business check — request review</button>
         <button class="btn-ghost" id="payNewBtn">Customer declined — start a new request</button>
       </div></div>`;
   }
@@ -1592,6 +1618,23 @@ function payRender(){
       <p class="pay-sub">Existing customer — the request went straight through to the normal workflow. Nothing else is needed here.</p>
       <div class="pay-actions"><button class="btn-primary" id="payFinishBtn">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish</button></div></div>`;
   }
+  else if(PAY.stage==='check'){
+    h = `<div class="pay-card"><div class="pay-eyebrow">Secure payment method</div>${who}
+      <p class="pay-sub"><b>Business check — dispatch review required.</b> This releases the request <b>without</b> a card on file. Dispatch will <b>not</b> schedule anyone until the dispatching team confirms this customer qualifies to pay by business check.</p>
+      ${msg}
+      <p class="pay-sub">Explain why they qualify — established business, who you spoke with, PO/check details:</p>
+      <textarea id="payCheckNote" class="pl-q" style="width:100%;min-height:90px;resize:vertical" placeholder="e.g. Office manager at Smith Dental — long-standing business customer, pays by company check on completion. Spoke with Karen.">${esc(PAY.checkNote||'')}</textarea>
+      <div class="pay-actions" style="margin-top:12px">
+        <button class="btn-primary" id="payCheckSend">Submit for review</button>
+        <button class="btn-ghost" id="payCheckCancel">Back</button>
+      </div></div>`;
+  }
+  else if(PAY.stage==='checkdone'){
+    h = `<div class="pay-card ok"><div class="pay-eyebrow">Support request</div>
+      <div class="pay-title"><span class="tick">${ic('<path d="M20 6 9 17l-5-5"/>')}</span>Released for dispatch review</div>
+      <p class="pay-sub">Sent through <b>without a card on file</b>, marked "Business check — pending review." The dispatching team has been alerted in Teams and will confirm eligibility <b>before anyone is dispatched</b>. Your note is on the ticket.</p>
+      <div class="pay-actions"><button class="btn-primary" id="payFinishBtn">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish</button></div></div>`;
+  }
   else { // error
     h = `<div class="pay-card"><div class="pay-eyebrow">Secure payment method</div>${who}
       ${msg||'<div class="pay-msg">Something went wrong.</div>'}
@@ -1607,6 +1650,9 @@ function payRender(){
   on('payRetryBtn', ()=>{ PAY.stage='status'; payRender(); payRefresh(); });
   on('payDismissBtn', payStartNew);
   on('payNewBtn', payStartNew);
+  on('payCheckBtn', ()=>{ PAY.stage='check'; payRender(); });
+  on('payCheckCancel', ()=>{ const t=document.getElementById('payCheckNote'); if(t) PAY.checkNote=t.value; PAY.stage='ready'; payRender(); });
+  on('payCheckSend', payCheckSubmit);
   on('payFinishBtn', ()=>{ PAY={stage:'done'}; PAY=null; try{sessionStorage.removeItem(PAY_SS_KEY);}catch(e){} goHome(); });
 
   if(PAY.stage==='form' && PAY.form && PAY.form.token){
