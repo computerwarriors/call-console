@@ -1452,6 +1452,8 @@ async function payRefresh(){
       : "Couldn't reach the server. Check the connection and press Retry.";
   } else {
     if(d.customer) PAY.customer = d.customer;
+    if(d.phone) PAY.phone = d.phone;
+    if(d.address) PAY.address = d.address;
     if(d.status==='awaiting_payment'){ PAY.stage = PAY.stage==='form' ? 'form' : 'ready'; }
     else if(d.status==='payment_secured' || d.status==='released'){
       if(d.cardSummary){ PAY.stage='secured'; PAY.card=d.cardSummary; }
@@ -1540,6 +1542,8 @@ function payRender(){
   const msg = PAY.msg ? `<div class="pay-msg${PAY.msgSoft?' soft':''}">${esc(PAY.msg)}</div>` : '';
   PAY.msgSoft = false;
   const who = PAY.customer ? `<div class="pay-title">Customer: ${esc(PAY.customer)}</div>` : '';
+  const intakeInfo = [PAY.customer, PAY.phone, PAY.address].filter(Boolean).join('  ·  ');
+  const infoLine = intakeInfo ? `<div class="pay-msg soft">Billing info from the intake — ${esc(intakeInfo)}</div>` : '';
   let h = '';
 
   if(PAY.stage==='status' || PAY.stage==='loading' || PAY.stage==='verifying'){
@@ -1563,6 +1567,7 @@ function payRender(){
     h = `<div class="pay-card"><div class="pay-eyebrow">Secure payment method</div>${who}
       <p class="pay-sub">Read the card details from the caller and enter them below. This form is served by <b>Authorize.Net</b> — the numbers go straight to their vault.</p>
       ${msg}
+      ${infoLine}
       <div class="pay-frame"><iframe id="anetFrame" name="anetFrame" title="Authorize.Net secure payment form" allow="payment"></iframe></div>
       <div class="pay-actions"><button class="btn-ghost" id="payCancelBtn">Cancel — back without saving</button></div></div>`;
   }
