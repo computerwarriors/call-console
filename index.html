@@ -1658,6 +1658,7 @@ async function ppLookup(){
     if(err==='pin_not_configured'){ PP.msg='This tool is not enabled yet — an admin needs to set the PROTECTION_PLAN_PIN environment variable in Vercel.'; }
     else if(err==='pin_required'){ PP.needPin=true; PP.msgSoft=true; PP.msg='Enter the team code to use this tool.'; }
     else if(err==='bad_pin'){ PP.needPin=true; PP.msg="That team code isn't right — try again."; }
+    else if(err==='duplicate_profiles'){ PP.msg='This email is attached to more than one Authorize.Net customer profile, so the lookup can’t pick one. In Authorize.Net → Customer Information Manager, search this email and delete or merge the duplicates, then search again.'; }
     else PP.msg='Lookup failed ('+err+'). Try again in a moment.';
     ppDraw(); return;
   }
