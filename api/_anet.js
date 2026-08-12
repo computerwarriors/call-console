@@ -84,27 +84,72 @@ async function createCustomerProfile({ requestId, description, email }) {
   return { ok: false, error: res.code || "anet_error", detail: res.text };
 }
 
-// Token for the hosted "add payment method" page (valid ~15 minutes).
+// Token for a hosted Accept Customer page (valid ~15 minutes).
+// page: "addPayment" (default) opens the single add-card form; "manage" opens
+// the payment-method manager (view / edit / add / delete) for the profile.
 // communicatorUrl must be a page on the SAME origin as the Call Console so the
 // hosted iframe can message the app (resize / successfulSave / cancel).
-async function getHostedProfileToken({ customerProfileId, communicatorUrl }) {
+async function getHostedProfileToken({ customerProfileId, communicatorUrl, page }) {
+  const manage = page === "manage";
+  const setting = [
+    { settingName: "hostedProfileIFrameCommunicatorUrl", settingValue: communicatorUrl },
+    { settingName: "hostedProfilePageBorderVisible", settingValue: "false" },
+    { settingName: "hostedProfileValidationMode", settingValue: "liveMode" },
+    { settingName: "hostedProfileBillingAddressRequired", settingValue: "true" },
+    { settingName: "hostedProfileCardCodeRequired", settingValue: "true" }
+  ];
+  if (manage) setting.push({ settingName: "hostedProfileManageOptions", settingValue: "showPayment" });
   const res = await anetCall("getHostedProfilePageRequest", {
     merchantAuthentication: merchantAuthentication(),
     customerProfileId: String(customerProfileId),
-    hostedProfileSettings: {
-      setting: [
-        { settingName: "hostedProfileIFrameCommunicatorUrl", settingValue: communicatorUrl },
-        { settingName: "hostedProfilePageBorderVisible", settingValue: "false" },
-        { settingName: "hostedProfileValidationMode", settingValue: "liveMode" },
-        { settingName: "hostedProfileBillingAddressRequired", settingValue: "true" },
-        { settingName: "hostedProfileCardCodeRequired", settingValue: "true" }
-      ]
-    }
+    hostedProfileSettings: { setting }
   });
   if (res.ok && res.json.token) {
-    return { ok: true, token: res.json.token, action: ACCEPT_BASE + "/customer/addPayment" };
+    return { ok: true, token: res.json.token, action: ACCEPT_BASE + "/customer/" + (manage ? "manage" : "addPayment") };
   }
   return { ok: false, error: res.code || "anet_error", detail: res.text };
+}
+
+// Find a customer profile by email (E00040 = no profile with that email).
+// Returns the profile ID plus the masked summary of each stored payment method
+// — never anything beyond Authorize.Net's own masked values.
+async function getCustomerProfileByEmail({ email }) {
+  const res = await anetCall("getCustomerProfileRequest", {
+    merchantAuthentication: merchantAuthentication(),
+    email: String(email).slice(0, 255),
+    unmaskExpirationDate: "true",
+    includeIssuerInfo: "false"
+  });
+  if (!res.ok) {
+    if (res.code === "E00040") return { ok: true, found: false };
+    return { ok: false, error: res.code || "anet_error", detail: res.text };
+  }
+  const prof = res.json.profile || {};
+  const cards = (prof.paymentProfiles || []).map(p => {
+    const cc = p.payment && p.payment.creditCard;
+    const ba = p.payment && p.payment.bankAccount;
+    let brand = "", last4 = "";
+    if (cc) {
+      brand = cc.cardType || "Card";
+      const m = String(cc.cardNumber || "").match(/(\d{4})\s*$/);
+      last4 = m ? m[1] : "";
+    } else if (ba) {
+      brand = "Bank account";
+      const m = String(ba.accountNumber || "").match(/(\d{4})\s*$/);
+      last4 = m ? m[1] : "";
+    }
+    return {
+      brand, last4,
+      paymentProfileId: String(p.customerPaymentProfileId || ""),
+      expiration: (cc && cc.expirationDate) || ""   // "YYYY-MM" (unmasked) or "XXXX"
+    };
+  });
+  return {
+    ok: true, found: true,
+    customerProfileId: String(prof.customerProfileId || ""),
+    description: prof.description || "",
+    cards
+  };
 }
 
 // Does the profile have at least one stored payment method? Returns the masked
@@ -142,4 +187,4 @@ function requestOrigin(req) {
   return host ? ("https://" + String(host).split(",")[0].trim()) : "";
 }
 
-module.exports = { createCustomerProfile, getHostedProfileToken, getPaymentProfileSummary, requestOrigin, ANET_ENV };
+module.exports = { createCustomerProfile, getHostedProfileToken, getPaymentProfileSummary, getCustomerProfileByEmail, requestOrigin, ANET_ENV };
