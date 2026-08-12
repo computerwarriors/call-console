@@ -1742,7 +1742,15 @@ async function ppResolve(){
     ppDraw(); return;
   }
   PP.dupes=null;
-  if(d.failed && d.failed.length){ PP.msgSoft=true; PP.msg=d.deleted.length+' deleted, '+d.failed.length+' failed — search again to see where things stand.'; }
+  // Repoint RepairShopr at the kept profile's newest card right away — RS may
+  // hold tokens from a profile that was just deleted.
+  PP.busyLine='Updating the RepairShopr card on file…'; ppDraw();
+  let rs=null; try{ rs=await ppApi({action:'sync', email:PP.email}); }catch(e){}
+  if(rs && rs.ok){ PP.msgSoft=true; PP.msg='Duplicates deleted. RepairShopr card on file repointed to the kept profile'+(rs.customerId?' (customer #'+rs.customerId+')':'')+'.'; }
+  else if(rs && rs.error==='no_payment_method'){ PP.msgSoft=true; PP.msg='Duplicates deleted. The kept profile has no card yet — RepairShopr will be updated automatically when a card is saved.'; }
+  else if(rs && rs.error==='rs_customer_not_found'){ PP.msgSoft=true; PP.msg='Duplicates deleted. No RepairShopr customer matches this email, so there was nothing to update there.'; }
+  else { PP.msg='Duplicates deleted, but RepairShopr could not be repointed ('+((rs&&rs.error)||'network')+') — open the payment manager and re-save the card to fix it.'; }
+  if(d.failed && d.failed.length){ PP.msgSoft=false; PP.msg=(PP.msg||'')+' Note: '+d.failed.length+' profile(s) could not be deleted.'; }
   ppLookup();
 }
 
