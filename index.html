@@ -1601,8 +1601,16 @@ function ppDraw(){
     const f = PP.found || {};
     const cards = (f.cards&&f.cards.length)
       ? f.cards.map(c=>`<span class="pay-badge">${esc((c.brand||'Card')+(c.last4?' •••• '+c.last4:''))}</span>`).join(' ') : '';
+    let rsLine='';
+    if(PP.rs && PP.rs.ok){
+      rsLine = `<div class="pay-msg soft">RepairShopr: card on file ${PP.rs.created?'linked':'updated'}${PP.rs.customerId?' for customer #'+esc(String(PP.rs.customerId)):''} — recurring invoices will charge this card.</div>`;
+    } else if(PP.rs){
+      const err = PP.rs.error==='rs_customer_not_found' ? 'no RepairShopr customer matches this email' : (PP.rs.error||'sync failed');
+      rsLine = `<div class="pay-msg">RepairShopr was NOT updated automatically (${esc(err)}). Link it by hand: customer → Stored Payment Profiles → Manual CIM Id.</div>`;
+    }
     inner = `<div class="pay-title"><span class="tick">${ic('<path d="M20 6 9 17l-5-5"/>')}</span>Payment method saved</div>
       <div style="margin:8px 0 14px;display:flex;gap:8px;flex-wrap:wrap">${cards}</div>
+      ${rsLine}
       <p class="step-sub">The stored payment method for <b>${esc(PP.email)}</b> is up to date in Authorize.Net.</p>
       <div class="pay-actions">
         <button class="btn-primary" id="ppFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish</button>
@@ -1669,7 +1677,12 @@ async function ppOpen(){
 async function ppAfterFrame(){
   PP.stage='busy'; PP.busyLine='Checking the stored payment method…'; ppDraw();
   let d=null; try{ d=await ppApi({action:'lookup', email:PP.email}); }catch(e){}
-  if(d && d.ok && d.found && d.cards && d.cards.length){ PP.found=d; PP.stage='saved'; }
+  if(d && d.ok && d.found && d.cards && d.cards.length){
+    PP.found=d; PP.stage='saved';
+    // Link the newest card into RepairShopr so recurring invoices charge it.
+    PP.rs=null;
+    try{ PP.rs = await ppApi({action:'sync', email:PP.email}); }catch(e){}
+  }
   else {
     if(d && d.ok) PP.found=d;
     PP.stage='result'; PP.msgSoft=true; PP.msg='No saved payment method yet.';
