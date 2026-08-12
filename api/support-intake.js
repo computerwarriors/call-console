@@ -46,6 +46,8 @@ module.exports = async (req, res) => {
       requestId: data.requestId || null,
       status: data.status || null,
       customer: data.customer || null,
+      phone: data.phone || null,
+      address: data.address || null,
       cardSummary: data.cardSummary || null,
       error: data.error || null
     });
