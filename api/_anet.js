@@ -122,6 +122,9 @@ async function getCustomerProfileByEmail({ email }) {
   });
   if (!res.ok) {
     if (res.code === "E00040") return { ok: true, found: false };
+    // E00039: several customer profiles share this email — Authorize.Net
+    // won't pick one. Surface a distinct code so the UI can explain the fix.
+    if (res.code === "E00039") return { ok: false, error: "duplicate_profiles", detail: res.text };
     return { ok: false, error: res.code || "anet_error", detail: res.text };
   }
   const prof = res.json.profile || {};
