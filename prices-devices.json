@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-08-10T10:00:03.233Z",
+  "_generated": "2026-08-17T10:00:03.375Z",
   "_warranty": {
     "screen": "Lifetime warranty on parts and labor, plus one free re-repair if the screen cracks again within 12 months.",
     "screenLine": "Premium-grade display, color-matched and touch-tested. Covered for life against defects — and if it cracks again within 12 months, we'll repair it once for free.",
@@ -89,7 +89,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 169.95,
+          "price": 159.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -125,7 +125,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 159.95,
+          "price": 149.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -143,7 +143,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 149.95,
+          "price": 139.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -179,7 +179,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 149.95,
+          "price": 139.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -197,7 +197,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 149.95,
+          "price": 139.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -211,11 +211,11 @@
       },
       "iPhone 15 Plus": {
         "Screen Repair": {
-          "price": 209.95,
+          "price": 199.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 159.95,
+          "price": 149.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -233,7 +233,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 139.95,
+          "price": 129.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -251,7 +251,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 149.95,
+          "price": 159.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -287,7 +287,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 149.95,
+          "price": 129.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -305,7 +305,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 139.95,
+          "price": 129.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -341,7 +341,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 139.95,
+          "price": 129.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -580,7 +580,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 144.95,
+          "price": 159.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -594,7 +594,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 159.95,
+          "price": 164.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -632,7 +632,7 @@
       },
       "iPad Air 13\" (2026)": {
         "Screen Repair": {
-          "price": 394.95,
+          "price": 464.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -642,7 +642,7 @@
       },
       "iPad Air 11\" (2026)": {
         "Screen Repair": {
-          "price": 379.95,
+          "price": 409.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -652,7 +652,7 @@
       },
       "iPad Air 13\" (2025)": {
         "Screen Repair": {
-          "price": 524.95,
+          "price": 484.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -680,11 +680,11 @@
       },
       "iPad Air 13\" (2024)": {
         "Screen Repair": {
-          "price": 524.95,
+          "price": 484.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 174.95,
+          "price": 189.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -698,7 +698,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 159.95,
+          "price": 164.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -708,11 +708,11 @@
       },
       "iPad Air 5 (2022)": {
         "Screen Repair": {
-          "price": 364.95,
+          "price": 324.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 159.95,
+          "price": 164.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -722,11 +722,11 @@
       },
       "iPad Air 4 (2020)": {
         "Screen Repair": {
-          "price": 364.95,
+          "price": 324.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 159.95,
+          "price": 164.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -754,7 +754,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 149.95,
+          "price": 154.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -764,11 +764,11 @@
       },
       "iPad Mini 6 (2021)": {
         "Screen Repair": {
-          "price": 454.95,
+          "price": 434.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 149.95,
+          "price": 154.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -834,7 +834,7 @@
       },
       "iPad Pro 11\" 5th Gen (2024)": {
         "Screen Repair": {
-          "price": 919.95,
+          "price": 994.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -1057,7 +1057,7 @@
       },
       "Galaxy S25 FE": {
         "Screen Repair": {
-          "price": 229.95,
+          "price": 239.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -1143,7 +1143,7 @@
       },
       "Galaxy S24": {
         "Screen Repair": {
-          "price": 299.95,
+          "price": 289.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
