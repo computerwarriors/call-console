@@ -456,6 +456,77 @@
   .cheat .ct{font-weight:600;color:var(--ink);flex:none;width:196px;font-size:13.5px}
   @media(max-width:600px){.cheat li{display:block}.cheat .ct{width:auto;margin-bottom:2px}}
 
+
+  /* ============ in-store sales scripts (Info ▸ In-Store Sales Scripts) ============ */
+  .info-nav{display:grid;gap:11px;margin:0 0 26px}
+  .ss-toolbar{display:flex;flex-direction:column;gap:11px;margin:0 0 16px}
+  .ss-toolrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .ss-chips{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0}
+  .ss-chip{
+    border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:8px 14px;
+    font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .14s;box-shadow:var(--sh-1);
+  }
+  .ss-chip:hover{border-color:var(--accent);color:var(--ink)}
+  .ss-chip.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--sh-2)}
+  .ss-expand{
+    flex:none;background:none;border:none;padding:6px 2px;font-size:12.5px;font-weight:600;
+    color:var(--accent-deep);cursor:pointer;text-decoration:underline;text-underline-offset:3px;
+  }
+  .ss-expand:hover{color:var(--ink)}
+  .ss-count{font-size:11.5px;color:var(--faint);letter-spacing:.2px}
+  .ss-list{display:block}
+  .ss-card{margin-bottom:10px}
+  .ss-card.hide{display:none}
+  .ss-card .acc-head{padding:16px 18px;gap:14px}
+  .ss-card .acc-title{font-size:17px}
+  .ss-card .acc-meta{font-size:11.5px;letter-spacing:.2px}
+  .ss-card .acc-body{padding:20px 20px 22px}
+  .ss-card .say{font-size:17px;line-height:1.6;padding:20px 24px 20px 26px}
+  .ss-ic{
+    width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;
+    background:var(--tint-soft,#EEF0F4);color:var(--tint,var(--accent));
+  }
+  .ss-ic svg{width:18px;height:18px}
+  .ss-sub{
+    font-family:var(--disp);font-size:14.5px;font-weight:600;letter-spacing:-.2px;color:var(--ink);
+    margin:26px 0 11px;display:flex;align-items:center;gap:9px;
+  }
+  .ss-sub::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none;box-shadow:0 0 0 3px var(--accent-soft)}
+  .ss-sub::after{content:"";flex:1;height:1px;background:var(--line)}
+  .ss-card .acc-body > .ss-sub:first-child{margin-top:2px}
+  .ss-pause{
+    font-size:13px;color:var(--muted);background:var(--paper-2);border:1px dashed var(--line);
+    border-radius:8px;padding:9px 13px;margin:-8px 0 16px;display:flex;gap:9px;align-items:center;
+  }
+  .ss-pause svg{width:14px;height:14px;flex:none;color:var(--faint)}
+  .ss-branch{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:2px 0 4px}
+  .ss-path{border:1.5px solid var(--line);border-radius:12px;padding:15px 16px 3px;background:var(--paper-2)}
+  .ss-path.good{border-color:#C9E2D5;background:linear-gradient(180deg,var(--good-soft),#FBFDFC)}
+  .ss-path.alert{border-color:var(--alert-line);background:linear-gradient(180deg,var(--alert-soft),#FEFBFB)}
+  .ss-path-h{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .ss-path-h svg{width:15px;height:15px}
+  .ss-path.good .ss-path-h{color:var(--good)}
+  .ss-path.alert .ss-path-h{color:var(--alert)}
+  .ss-path .say{margin:0 0 13px;font-size:16px}
+  .ss-objs{margin-top:2px}
+  .ss-objs .obj-b{font-size:13.5px}
+  .ss-empty{padding:26px 4px;color:var(--faint);font-size:14px;text-align:center}
+  @media(max-width:880px){
+    .ss-branch{grid-template-columns:1fr}
+    .ss-card .say{font-size:16px}
+  }
+  /* narrow screens: the fixed Info/Home buttons already sit top-right, and
+     Home returns to the console — so drop the duplicate (and the long tag,
+     which would slide under them) from the flowbar. */
+  @media(max-width:700px){ #ssConsole,#ssTag{display:none} }
+  @media(max-width:600px){
+    /* stack the card head so a long script name isn't squeezed into a column */
+    .ss-card .acc-head{flex-wrap:wrap;padding:14px 15px;gap:11px}
+    .ss-card .acc-title{flex:1;min-width:0;font-size:16px}
+    .ss-card .acc-meta{order:3;width:100%;max-width:100%;margin-left:0;text-align:left;padding-left:45px}
+    .ss-card .acc-body{padding:16px 15px 18px}
+  }
+
   @media(max-width:600px){
     header.topbar{padding:12px 16px}
     .topbar-btn{padding:8px 12px}
@@ -827,7 +898,7 @@ function choicesBlock(choices){
 }
 
 /* ---- screens ---- */
-function goHome(){ state=null; history=[]; renderHome(); }
+function goHome(){ ssSetHash(false); state=null; history=[]; renderHome(); }
 
 /* =========================================================================
    DEVICE REPAIR — brand -> device -> repair -> wiki price + script
@@ -1172,11 +1243,20 @@ function renderHome(){
 }
 
 function renderInfo(){
+  ssSetHash(false);
   const loc=l=>`<div class="note"><span class="nk">${esc(l.name)}</span><b>${esc(l.addr)}</b>${l.near?`<span class="near">${esc(l.near)}</span>`:''}${l.phone?`<span class="near">${esc(l.phone)}</span>`:''}</div>`;
   const row=(t,d)=>`<li><span class="ct">${esc(t)}</span><span>${esc(d)}</span></li>`;
   stage.innerHTML=`
     <div class="flowbar"><button class="back" id="backBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag">Quick info</span></div>
     <div class="panel"><div class="panel-body">
+      <div class="eyebrow">Reference</div>
+      <div class="info-nav">
+        <button class="tile" id="ssOpen" style="--tint:#1E7A55;--tint-soft:#E4F1EB">
+          <span class="ic">${ic('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M7 8h10M7 12h6"/>')}</span>
+          <span class="txt"><h3>In-Store Sales Scripts</h3><p>Approved counter wording — screen protector, priority service, protection plans, Google reviews.</p></span>
+          <span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span>
+        </button>
+      </div>
       <div class="eyebrow">Hours &amp; locations</div>
       <h2 class="step-title">${esc(t('shop.hours',SHOP.hours))}</h2>
       <p class="step-sub">Walk-ins welcome — or book a set time below.</p>
@@ -1192,6 +1272,305 @@ function renderInfo(){
     else renderStep();
   };
   document.getElementById('apptBtn').onclick=()=>renderAppointments(renderInfo, APPT_LINKS.general);
+  document.getElementById('ssOpen').onclick=renderSalesScripts;
+}
+
+
+/* =========================================================================
+   IN-STORE SALES SCRIPTS — Info ▸ In-Store Sales Scripts
+   A counter reference, not training: the employee picks the situation, reads
+   the approved script, and pops open the objection they just heard.
+
+   TO ADD A SCRIPT: append one entry to SALES_SCRIPTS. The search, the category
+   chips and the cards all build themselves from this list.
+     cat        one of SS_CATS (add a category there if none fits)
+     when       the "When to use" line
+     blocks     [{sub}|{say,label}|{pause}|{note,label,warn}|{branch}]
+     objections [{q, blocks}]  — collapsed until tapped
+     after      blocks rendered under the objections
+   ========================================================================= */
+const SS_CATS = [
+  { id:"all",      label:"All" },
+  { id:"phone",    label:"Phone" },
+  { id:"computer", label:"Computer" },
+  { id:"device",   label:"Tablet & Console" },
+  { id:"plans",    label:"Protection Plans" },
+  { id:"review",   label:"Reviews" }
+];
+
+const SS_PLAN_PITCH = "Okay. We offer a residential protection plan that gives you the same type of managed security we use for our clients, starting at $14.95 a month. It protects up to two computers and includes guaranteed virus protection. Would you like me to show you the options?";
+
+const SALES_SCRIPTS = [
+  {
+    id:"screen-protector",
+    title:"Screen Protector",
+    short:"Phone screen check-in",
+    cat:"phone",
+    tint:"#E28313", tintSoft:"#FCEBD3",
+    icon:'<rect x="6" y="2" width="12" height="20" rx="2.4"/><path d="M11 18h2"/>',
+    tags:"screen protector tempered glass lifetime replacement phone repair check-in add-on",
+    when:"During check-in for a phone screen repair — before the repair is performed.",
+    blocks:[
+      { say:"Since we’re putting a brand-new screen on your phone, would you like us to protect it with a screen protector? It includes free lifetime replacements." }
+    ]
+  },
+  {
+    id:"computer-priority",
+    title:"Computer Priority Service",
+    short:"Computer check-in · $100",
+    cat:"computer",
+    tint:"#2F73C4", tintSoft:"#E2ECF8",
+    icon:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    tags:"priority rush skip the queue 24 hour diagnostic computer laptop desktop $100",
+    when:"During computer check-in.",
+    blocks:[
+      { say:"From here, you have two options. Our normal queue is typically 2 to 3 business days before a technician begins diagnostics. Or, for an additional $100, you can skip the queue and receive a diagnostic response within 24 hours. Which option would you like to go with?" }
+    ]
+  },
+  {
+    id:"device-priority",
+    title:"Tablet / Game Console Priority Service",
+    short:"Tablet or console check-in · $75",
+    cat:"device",
+    tint:"#7C5AC2", tintSoft:"#EDE7F8",
+    icon:'<rect x="3" y="4" width="12" height="9" rx="1.5"/><path d="M6 20h6M9 16v4"/><rect x="16" y="9" width="6" height="11" rx="1.4"/>',
+    tags:"priority rush skip the queue tablet ipad game console playstation xbox nintendo switch $75",
+    when:"During tablet or game console check-in.",
+    blocks:[
+      { say:"From here, you have two options. Our normal queue is typically 2 to 3 business days before a technician begins working on your device. Or, for an additional $75, you can skip the queue and your device will be the next one worked on. Which option would you like to go with?" }
+    ]
+  },
+  {
+    id:"protection-plans",
+    title:"Residential Protection Plans",
+    short:"Computer check-in · new computer purchase",
+    cat:"plans",
+    tint:"#1E7A55", tintSoft:"#E4F1EB",
+    icon:'<path d="M12 3l8 3.5v5c0 4.6-3.3 8.6-8 9.5-4.7-.9-8-4.9-8-9.5v-5z"/><path d="M9.2 12.2l2 2 3.6-4"/>',
+    tags:"residential protection plan antivirus security managed gold platinum peace of mind $14.95 monthly subscription",
+    when:"Primarily during computer check-in, or when a customer purchases a computer from Computer Warriors.",
+    blocks:[
+      { sub:"Computer check-in" },
+      { say:"While we have your computer here, what are you currently using for antivirus and security?", label:"Start with" },
+      { pause:"Allow the customer to answer." },
+      { say:SS_PLAN_PITCH, label:"Then say" },
+
+      { sub:"New computer purchase" },
+      { say:"Before we get your new computer set up, what are you currently using for antivirus and security?", label:"Start with" },
+      { pause:"Allow the customer to answer." },
+      { say:SS_PLAN_PITCH, label:"Then say" },
+
+      { sub:"Presenting the plans" },
+      { say:"We have three options. Gold is primarily your security and protection. Platinum adds us maintaining the computer and includes an annual tune-up. Peace of Mind is our full-support option and adds remote support, so when you need help, you can call us and we can remotely connect and assist you.", label:"If they want to hear the options" },
+      { say:"Which level sounds like the best fit for you?", label:"Then ask" }
+    ],
+    objections:[
+      { q:"“I already have antivirus.”", blocks:[
+        { say:"That’s great. The difference with our plans is that the protection is managed by us, so instead of just having antivirus installed and hoping it’s doing its job, we’re helping manage the protection for you. Plus, depending on the plan, you can get maintenance and support as well." },
+        { say:"Would you like me to show you the options so you can compare it to what you have now?", label:"Then say" }
+      ]},
+      { q:"“Windows Defender is free.”", blocks:[
+        { say:"Absolutely, and Defender provides basic protection. The difference is that our protection is managed, so there’s actually a team behind it rather than relying solely on software running on the computer." },
+        { say:"For $14.95 a month, you can have us helping protect the computer. Would that be worth it for the peace of mind?", label:"Then say" }
+      ]},
+      { q:"“I don’t really get viruses.”", blocks:[
+        { say:"I hope you never do. The best time to put protection in place is before something happens, especially because most threats today aren’t the old pop-ups and viruses people are used to seeing." },
+        { say:"For $14.95 a month, would you rather have that additional protection in place?", label:"Then say" }
+      ]},
+      { q:"“I don’t want another monthly payment.”", blocks:[
+        { say:"I completely understand. That’s why we keep the entry-level plan at $14.95 a month. It’s really designed to give you professional protection without turning it into a large monthly expense." },
+        { say:"Would the Gold plan make more sense if we kept it just to the protection side?", label:"Then say" }
+      ]},
+      { q:"“I’ll think about it.”", blocks:[
+        { say:"Absolutely. Is there anything specifically you’re unsure about — the price, what it covers, or whether you actually need it?" }
+      ]},
+      { q:"“That’s too expensive.”", blocks:[
+        { say:"I understand. Keep in mind that it covers up to two computers, so if you have another computer at home, we can protect that one as well." },
+        { say:"Would that make the $14.95 a month make more sense for you?", label:"Then say" }
+      ]},
+      { q:"“Macs don’t get viruses.”", blocks:[
+        { say:"Macs definitely have some security advantages, but they’re not immune to malware, phishing, malicious software, or compromised accounts. The protection gives you another layer of security rather than relying solely on what’s built into the Mac." }
+      ]},
+      { q:"“Can’t I just buy Norton or McAfee?”", blocks:[
+        { say:"Absolutely. The biggest difference is that you’re not just buying another piece of software from us. You’re getting managed protection backed by our team. If something happens, you already have someone you know locally who can help." }
+      ]},
+      { q:"“I’ll just add it later.”", blocks:[
+        { say:"Absolutely, you can. Since we already have your computer here, though, this is the easiest time for us to get everything installed and configured for you. Would you like us to go ahead and take care of it while it’s here?" }
+      ]}
+    ],
+    after:[
+      { note:"We are not simply selling antivirus. The value is: “You have Computer Warriors watching your back.”", label:"Key positioning" }
+    ]
+  },
+  {
+    id:"google-review",
+    title:"Google Review",
+    short:"At pickup",
+    cat:"review",
+    tint:"#E0A020", tintSoft:"#FDF1DF",
+    icon:'<path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.2l5.9-.9z"/>',
+    tags:"google review 5 star rating pickup feedback complaint",
+    when:"At pickup, after the customer interaction is complete.",
+    blocks:[
+      { say:"Would you say you had a 5-star experience with us today?", label:"Start with" },
+      { branch:[
+        { tone:"good", label:"If yes",
+          icon:'<path d="M20 6L9 17l-5-5"/>',
+          blocks:[
+            { say:"That’s great to hear. Would you mind leaving us a 5-star review on Google?" },
+            { say:"Perfect. If you have your phone with you, it only takes a couple of seconds.", label:"If they agree" }
+          ]},
+        { tone:"alert", label:"If no",
+          icon:'<path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/>',
+          blocks:[
+            { say:"I’m sorry to hear that. One thing that’s really important to us is constant improvement. Can you tell me where we fell short?" }
+          ]}
+      ]}
+    ]
+  }
+];
+
+/* ---- block renderers (reuse the console's say / note / accordion styles) ---- */
+function ssBlock(b){
+  if(b.sub)    return `<div class="ss-sub">${esc(b.sub)}</div>`;
+  if(b.say)    return sayBlock(b.say, b.label || "Say this");
+  if(b.pause)  return `<div class="ss-pause">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}${esc(b.pause)}</div>`;
+  if(b.note)   return noteBlock(b.note, b.warn, b.label);
+  if(b.branch) return `<div class="ss-branch">`+b.branch.map(p=>
+      `<div class="ss-path ${esc(p.tone||'')}"><div class="ss-path-h">${p.icon?ic(p.icon):''}${esc(p.label)}</div>${p.blocks.map(ssBlock).join('')}</div>`
+    ).join('')+`</div>`;
+  return '';
+}
+function ssObjectionsBlock(s){
+  if(!s.objections || !s.objections.length) return '';
+  return `<div class="sec-lbl">If the customer says…</div>`
+    + `<div class="obj-btns ss-objs">`
+    + s.objections.map((o,i)=>`<button class="obj-b" data-ssobj="${i}">${esc(o.q)}</button>`).join('')
+    + `</div>`
+    + s.objections.map((o,i)=>`<div class="reveal" data-ssrev="${i}">${o.blocks.map(ssBlock).join('')}</div>`).join('');
+}
+// Everything searchable about one script, flattened into a single haystack.
+function ssHay(v){
+  if(v==null) return '';
+  if(typeof v==='string') return ' '+v;
+  if(Array.isArray(v)) return v.map(ssHay).join('');
+  if(typeof v==='object') return Object.keys(v).map(k=>ssHay(v[k])).join('');
+  return '';
+}
+function ssCard(s){
+  const body = noteBlock(s.when, false, "When to use")
+    + (s.blocks||[]).map(ssBlock).join('')
+    + ssObjectionsBlock(s)
+    + (s.after||[]).map(ssBlock).join('');
+  return `<div class="acc ss-card" data-cat="${esc(s.cat)}" data-hay="${esc(ssHay(s).toLowerCase())}" style="--flow:${esc(s.tint)}">
+    <button class="acc-head">
+      <span class="ss-ic" style="--tint:${esc(s.tint)};--tint-soft:${esc(s.tintSoft)}">${ic(s.icon)}</span>
+      <span class="acc-title">${esc(s.title)}</span>
+      <span class="acc-meta">${esc(s.short)}</span>
+      <span class="acc-arr">${ic('<path d="M6 9l6 6 6-6"/>')}</span>
+    </button>
+    <div class="acc-body">${body}</div>
+  </div>`;
+}
+
+function renderSalesScripts(){
+  ssSetHash(true);
+  const chips = SS_CATS.filter(c=>c.id==='all' || SALES_SCRIPTS.some(s=>s.cat===c.id))
+    .map(c=>`<button class="ss-chip${c.id==='all'?' on':''}" data-sscat="${c.id}">${esc(c.label)}</button>`).join('');
+  stage.innerHTML=`
+    <div class="flowbar">
+      <button class="back" id="ssBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button>
+      <button class="back" id="ssConsole">${ic('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>')} Call Console</button>
+      <span class="flowtag" id="ssTag"><span class="dot" style="background:var(--accent)"></span>In-store sales scripts</span>
+    </div>
+    <div class="panel" style="--flow:var(--accent)"><div class="panel-body">
+      <div class="eyebrow">At the counter</div>
+      <h2 class="step-title">In-Store Sales Scripts</h2>
+      <p class="step-sub">Approved wording for in-person sales. Tap a card to open the script — objections stay tucked away until you need them.</p>
+      <div class="ss-toolbar">
+        <div class="model-search">
+          <span class="ms-ic">${SEARCH_ICON}</span>
+          <input type="search" id="ssSearch" placeholder="Search scripts — screen protector, priority, antivirus, review…" autocomplete="off">
+        </div>
+        <div class="ss-toolrow">
+          <div class="ss-chips">${chips}</div>
+          <button class="ss-expand" id="ssExpand">Expand all</button>
+        </div>
+        <div class="ss-count" id="ssCount"></div>
+      </div>
+      <div class="ss-list" id="ssList">${SALES_SCRIPTS.map(ssCard).join('')}</div>
+      <div class="ss-empty" id="ssEmpty" style="display:none">No script matches that search — try a shorter word, or tap <b>All</b>.</div>
+    </div></div>`;
+  wireSalesScripts();
+}
+
+function wireSalesScripts(){
+  const cards=[...stage.querySelectorAll('.ss-card')];
+  const search=document.getElementById('ssSearch');
+  const count=document.getElementById('ssCount');
+  const empty=document.getElementById('ssEmpty');
+  const expand=document.getElementById('ssExpand');
+  let cat='all';
+
+  // open / close a script
+  cards.forEach(card=>{
+    card.querySelector('.acc-head').onclick=()=>{ card.classList.toggle('open'); syncExpandLabel(); };
+    // objections: tap to reveal, tap again to close — scoped to this card
+    card.querySelectorAll('[data-ssobj]').forEach(b=>b.onclick=()=>{
+      const was=b.classList.contains('on');
+      card.querySelectorAll('[data-ssobj]').forEach(x=>x.classList.remove('on'));
+      card.querySelectorAll('[data-ssrev]').forEach(r=>r.classList.remove('show'));
+      if(!was){ b.classList.add('on'); const r=card.querySelector(`[data-ssrev="${b.dataset.ssobj}"]`); if(r) r.classList.add('show'); }
+    });
+  });
+
+  function visible(){ return cards.filter(c=>!c.classList.contains('hide')); }
+  function syncExpandLabel(){
+    const vis=visible();
+    const allOpen = vis.length>0 && vis.every(c=>c.classList.contains('open'));
+    expand.textContent = allOpen ? 'Collapse all' : 'Expand all';
+  }
+  function apply(){
+    const q=(search.value||'').trim().toLowerCase();
+    cards.forEach(c=>{
+      const hit = (cat==='all' || c.dataset.cat===cat) && (!q || c.dataset.hay.includes(q));
+      c.classList.toggle('hide', !hit);
+    });
+    const vis=visible();
+    empty.style.display = vis.length ? 'none' : 'block';
+    count.textContent = vis.length===SALES_SCRIPTS.length
+      ? `${SALES_SCRIPTS.length} scripts`
+      : `${vis.length} of ${SALES_SCRIPTS.length} scripts`;
+    // one match left — open it, so a search lands straight on the words to say
+    if(vis.length===1 && (q || cat!=='all')) vis[0].classList.add('open');
+    syncExpandLabel();
+  }
+
+  search.addEventListener('input', apply);
+  stage.querySelectorAll('[data-sscat]').forEach(chip=>chip.onclick=()=>{
+    cat=chip.dataset.sscat;
+    stage.querySelectorAll('[data-sscat]').forEach(x=>x.classList.toggle('on', x===chip));
+    apply();
+  });
+  expand.onclick=()=>{
+    const open = expand.textContent==='Expand all';
+    visible().forEach(c=>c.classList.toggle('open', open));
+    syncExpandLabel();
+  };
+
+  document.getElementById('ssBack').onclick=()=>{ ssSetHash(false); renderInfo(); };
+  document.getElementById('ssConsole').onclick=()=>{ ssSetHash(false); goHome(); };
+  apply();
+}
+
+// Keep #scripts in the address bar while the page is open, so it can be
+// bookmarked on a counter tablet. replaceState (not location.hash) — it must
+// not fire hashchange and re-render underneath us.
+function ssSetHash(on){
+  try{
+    const want = on ? location.pathname+location.search+'#scripts' : location.pathname+location.search;
+    if(on ? location.hash!=='#scripts' : location.hash==='#scripts') window.history.replaceState(null,'',want);
+  }catch(e){ /* file:// or blocked history — the page still works */ }
 }
 
 /* =========================================================================
@@ -1975,9 +2354,19 @@ new MutationObserver(scheduleFit).observe(stage,{childList:true,subtree:true});
 window.addEventListener('resize',scheduleFit);
 document.getElementById('homeBtn').onclick=goHome;
 document.getElementById('infoBtn').onclick=renderInfo;
-window.addEventListener('hashchange',()=>{ if(location.hash==='#admin') openAdmin(); });
+window.addEventListener('hashchange',()=>{
+  if(location.hash==='#admin') openAdmin();
+  else if(location.hash==='#scripts') renderSalesScripts();
+});
+// #scripts is a bookmarkable deep link to the in-store sales scripts. Read it
+// before goHome() clears it, so a counter tablet opens straight to the scripts.
+const BOOT_HASH = location.hash;
 goHome();
-Promise.all([loadAdminConfig(), loadPricing()]).then(()=>{ rerenderCurrent(); if(location.hash==='#admin') openAdmin(); });
+if(BOOT_HASH==='#scripts') renderSalesScripts();
+Promise.all([loadAdminConfig(), loadPricing()]).then(()=>{
+  if(BOOT_HASH==='#scripts') renderSalesScripts(); else rerenderCurrent();
+  if(location.hash==='#admin') openAdmin();
+});
 </script>
 </body>
 </html>
