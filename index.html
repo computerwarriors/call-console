@@ -459,24 +459,14 @@
 
   /* ============ in-store sales scripts (Info ▸ In-Store Sales Scripts) ============ */
   .info-nav{display:grid;gap:11px;margin:0 0 26px}
-  .ss-toolbar{display:flex;flex-direction:column;gap:11px;margin:0 0 16px}
-  .ss-toolrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .ss-chips{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0}
-  .ss-chip{
-    border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:8px 14px;
-    font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .14s;box-shadow:var(--sh-1);
-  }
-  .ss-chip:hover{border-color:var(--accent);color:var(--ink)}
-  .ss-chip.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--sh-2)}
+  .ss-toolbar{display:flex;justify-content:flex-end;margin:0 0 10px}
   .ss-expand{
     flex:none;background:none;border:none;padding:6px 2px;font-size:12.5px;font-weight:600;
     color:var(--accent-deep);cursor:pointer;text-decoration:underline;text-underline-offset:3px;
   }
   .ss-expand:hover{color:var(--ink)}
-  .ss-count{font-size:11.5px;color:var(--faint);letter-spacing:.2px}
   .ss-list{display:block}
   .ss-card{margin-bottom:10px}
-  .ss-card.hide{display:none}
   .ss-card .acc-head{padding:16px 18px;gap:14px}
   .ss-card .acc-title{font-size:17px}
   .ss-card .acc-meta{font-size:11.5px;letter-spacing:.2px}
@@ -510,7 +500,6 @@
   .ss-path .say{margin:0 0 13px;font-size:16px}
   .ss-objs{margin-top:2px}
   .ss-objs .obj-b{font-size:13.5px}
-  .ss-empty{padding:26px 4px;color:var(--faint);font-size:14px;text-align:center}
   @media(max-width:880px){
     .ss-branch{grid-template-columns:1fr}
     .ss-card .say{font-size:16px}
@@ -1281,23 +1270,14 @@ function renderInfo(){
    A counter reference, not training: the employee picks the situation, reads
    the approved script, and pops open the objection they just heard.
 
-   TO ADD A SCRIPT: append one entry to SALES_SCRIPTS. The search, the category
-   chips and the cards all build themselves from this list.
-     cat        one of SS_CATS (add a category there if none fits)
+   TO ADD A SCRIPT: append one entry to SALES_SCRIPTS — the cards build
+   themselves from this list, in this order.
+     short      the grey line on the card head (when it applies, at a glance)
      when       the "When to use" line
      blocks     [{sub}|{say,label}|{pause}|{note,label,warn}|{branch}]
      objections [{q, blocks}]  — collapsed until tapped
      after      blocks rendered under the objections
    ========================================================================= */
-const SS_CATS = [
-  { id:"all",      label:"All" },
-  { id:"phone",    label:"Phone" },
-  { id:"computer", label:"Computer" },
-  { id:"device",   label:"Tablet & Console" },
-  { id:"plans",    label:"Protection Plans" },
-  { id:"review",   label:"Reviews" }
-];
-
 const SS_PLAN_PITCH = "Okay. We offer a residential protection plan that gives you the same type of managed security we use for our clients, starting at $14.95 a month. It protects up to two computers and includes guaranteed virus protection. Would you like me to show you the options?";
 
 const SALES_SCRIPTS = [
@@ -1305,10 +1285,8 @@ const SALES_SCRIPTS = [
     id:"screen-protector",
     title:"Screen Protector",
     short:"Phone screen check-in",
-    cat:"phone",
     tint:"#E28313", tintSoft:"#FCEBD3",
     icon:'<rect x="6" y="2" width="12" height="20" rx="2.4"/><path d="M11 18h2"/>',
-    tags:"screen protector tempered glass lifetime replacement phone repair check-in add-on",
     when:"During check-in for a phone screen repair — before the repair is performed.",
     blocks:[
       { say:"Since we’re putting a brand-new screen on your phone, would you like us to protect it with a screen protector? It includes free lifetime replacements." }
@@ -1318,10 +1296,8 @@ const SALES_SCRIPTS = [
     id:"computer-priority",
     title:"Computer Priority Service",
     short:"Computer check-in · $100",
-    cat:"computer",
     tint:"#2F73C4", tintSoft:"#E2ECF8",
     icon:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    tags:"priority rush skip the queue 24 hour diagnostic computer laptop desktop $100",
     when:"During computer check-in.",
     blocks:[
       { say:"From here, you have two options. Our normal queue is typically 2 to 3 business days before a technician begins diagnostics. Or, for an additional $100, you can skip the queue and receive a diagnostic response within 24 hours. Which option would you like to go with?" }
@@ -1331,10 +1307,8 @@ const SALES_SCRIPTS = [
     id:"device-priority",
     title:"Tablet / Game Console Priority Service",
     short:"Tablet or console check-in · $75",
-    cat:"device",
     tint:"#7C5AC2", tintSoft:"#EDE7F8",
     icon:'<rect x="3" y="4" width="12" height="9" rx="1.5"/><path d="M6 20h6M9 16v4"/><rect x="16" y="9" width="6" height="11" rx="1.4"/>',
-    tags:"priority rush skip the queue tablet ipad game console playstation xbox nintendo switch $75",
     when:"During tablet or game console check-in.",
     blocks:[
       { say:"From here, you have two options. Our normal queue is typically 2 to 3 business days before a technician begins working on your device. Or, for an additional $75, you can skip the queue and your device will be the next one worked on. Which option would you like to go with?" }
@@ -1344,10 +1318,8 @@ const SALES_SCRIPTS = [
     id:"protection-plans",
     title:"Residential Protection Plans",
     short:"Computer check-in · new computer purchase",
-    cat:"plans",
     tint:"#1E7A55", tintSoft:"#E4F1EB",
     icon:'<path d="M12 3l8 3.5v5c0 4.6-3.3 8.6-8 9.5-4.7-.9-8-4.9-8-9.5v-5z"/><path d="M9.2 12.2l2 2 3.6-4"/>',
-    tags:"residential protection plan antivirus security managed gold platinum peace of mind $14.95 monthly subscription",
     when:"Primarily during computer check-in, or when a customer purchases a computer from Computer Warriors.",
     blocks:[
       { sub:"Computer check-in" },
@@ -1406,10 +1378,8 @@ const SALES_SCRIPTS = [
     id:"google-review",
     title:"Google Review",
     short:"At pickup",
-    cat:"review",
     tint:"#E0A020", tintSoft:"#FDF1DF",
     icon:'<path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.2l5.9-.9z"/>',
-    tags:"google review 5 star rating pickup feedback complaint",
     when:"At pickup, after the customer interaction is complete.",
     blocks:[
       { say:"Would you say you had a 5-star experience with us today?", label:"Start with" },
@@ -1449,20 +1419,12 @@ function ssObjectionsBlock(s){
     + `</div>`
     + s.objections.map((o,i)=>`<div class="reveal" data-ssrev="${i}">${o.blocks.map(ssBlock).join('')}</div>`).join('');
 }
-// Everything searchable about one script, flattened into a single haystack.
-function ssHay(v){
-  if(v==null) return '';
-  if(typeof v==='string') return ' '+v;
-  if(Array.isArray(v)) return v.map(ssHay).join('');
-  if(typeof v==='object') return Object.keys(v).map(k=>ssHay(v[k])).join('');
-  return '';
-}
 function ssCard(s){
   const body = noteBlock(s.when, false, "When to use")
     + (s.blocks||[]).map(ssBlock).join('')
     + ssObjectionsBlock(s)
     + (s.after||[]).map(ssBlock).join('');
-  return `<div class="acc ss-card" data-cat="${esc(s.cat)}" data-hay="${esc(ssHay(s).toLowerCase())}" style="--flow:${esc(s.tint)}">
+  return `<div class="acc ss-card" style="--flow:${esc(s.tint)}">
     <button class="acc-head">
       <span class="ss-ic" style="--tint:${esc(s.tint)};--tint-soft:${esc(s.tintSoft)}">${ic(s.icon)}</span>
       <span class="acc-title">${esc(s.title)}</span>
@@ -1475,8 +1437,6 @@ function ssCard(s){
 
 function renderSalesScripts(){
   ssSetHash(true);
-  const chips = SS_CATS.filter(c=>c.id==='all' || SALES_SCRIPTS.some(s=>s.cat===c.id))
-    .map(c=>`<button class="ss-chip${c.id==='all'?' on':''}" data-sscat="${c.id}">${esc(c.label)}</button>`).join('');
   stage.innerHTML=`
     <div class="flowbar">
       <button class="back" id="ssBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button>
@@ -1488,29 +1448,16 @@ function renderSalesScripts(){
       <h2 class="step-title">In-Store Sales Scripts</h2>
       <p class="step-sub">Approved wording for in-person sales. Tap a card to open the script — objections stay tucked away until you need them.</p>
       <div class="ss-toolbar">
-        <div class="model-search">
-          <span class="ms-ic">${SEARCH_ICON}</span>
-          <input type="search" id="ssSearch" placeholder="Search scripts — screen protector, priority, antivirus, review…" autocomplete="off">
-        </div>
-        <div class="ss-toolrow">
-          <div class="ss-chips">${chips}</div>
-          <button class="ss-expand" id="ssExpand">Expand all</button>
-        </div>
-        <div class="ss-count" id="ssCount"></div>
+        <button class="ss-expand" id="ssExpand">Expand all</button>
       </div>
       <div class="ss-list" id="ssList">${SALES_SCRIPTS.map(ssCard).join('')}</div>
-      <div class="ss-empty" id="ssEmpty" style="display:none">No script matches that search — try a shorter word, or tap <b>All</b>.</div>
     </div></div>`;
   wireSalesScripts();
 }
 
 function wireSalesScripts(){
   const cards=[...stage.querySelectorAll('.ss-card')];
-  const search=document.getElementById('ssSearch');
-  const count=document.getElementById('ssCount');
-  const empty=document.getElementById('ssEmpty');
   const expand=document.getElementById('ssExpand');
-  let cat='all';
 
   // open / close a script
   cards.forEach(card=>{
@@ -1524,43 +1471,18 @@ function wireSalesScripts(){
     });
   });
 
-  function visible(){ return cards.filter(c=>!c.classList.contains('hide')); }
   function syncExpandLabel(){
-    const vis=visible();
-    const allOpen = vis.length>0 && vis.every(c=>c.classList.contains('open'));
+    const allOpen = cards.length>0 && cards.every(c=>c.classList.contains('open'));
     expand.textContent = allOpen ? 'Collapse all' : 'Expand all';
   }
-  function apply(){
-    const q=(search.value||'').trim().toLowerCase();
-    cards.forEach(c=>{
-      const hit = (cat==='all' || c.dataset.cat===cat) && (!q || c.dataset.hay.includes(q));
-      c.classList.toggle('hide', !hit);
-    });
-    const vis=visible();
-    empty.style.display = vis.length ? 'none' : 'block';
-    count.textContent = vis.length===SALES_SCRIPTS.length
-      ? `${SALES_SCRIPTS.length} scripts`
-      : `${vis.length} of ${SALES_SCRIPTS.length} scripts`;
-    // one match left — open it, so a search lands straight on the words to say
-    if(vis.length===1 && (q || cat!=='all')) vis[0].classList.add('open');
-    syncExpandLabel();
-  }
-
-  search.addEventListener('input', apply);
-  stage.querySelectorAll('[data-sscat]').forEach(chip=>chip.onclick=()=>{
-    cat=chip.dataset.sscat;
-    stage.querySelectorAll('[data-sscat]').forEach(x=>x.classList.toggle('on', x===chip));
-    apply();
-  });
   expand.onclick=()=>{
     const open = expand.textContent==='Expand all';
-    visible().forEach(c=>c.classList.toggle('open', open));
+    cards.forEach(c=>c.classList.toggle('open', open));
     syncExpandLabel();
   };
 
   document.getElementById('ssBack').onclick=()=>{ ssSetHash(false); renderInfo(); };
   document.getElementById('ssConsole').onclick=()=>{ ssSetHash(false); goHome(); };
-  apply();
 }
 
 // Keep #scripts in the address bar while the page is open, so it can be
