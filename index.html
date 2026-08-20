@@ -683,10 +683,12 @@ function t(path, fallback){
   return o!=null ? o : (fallback!==undefined ? fallback : (DEF[path]||''));
 }
 
+let CFG_OK = false;   // did the config store answer? guards against saving over it
 async function loadAdminConfig(){
   try{
     const r = await fetch('/api/config', { headers:{ 'Accept':'application/json' }, cache:'no-store' });
     const d = await r.json();
+    CFG_OK = !!(d && d.ok);
     if(d && d.config && typeof d.config==='object') ADMIN_CFG = d.config;
   }catch(e){ /* keep defaults */ }
 }
@@ -781,7 +783,7 @@ function coverageFor(device,cat){
 /* ---- render helpers ---- */
 function sayBlock(text,label){
   const paras=text.split('\n\n').map(p=>`<p>${esc(p).replace('{price}','<span class="say-price">$xxx.xx</span>')}</p>`).join('');
-  return `<div class="say"><span class="lbl">${label||'Say to caller'}</span>${paras}</div>`;
+  return `<div class="say"><span class="lbl">${esc(label||'Say to caller')}</span>${paras}</div>`;
 }
 function embedBlock(e){
   const allow=e.allow?` allow="${esc(e.allow)}"`:'';
@@ -1280,13 +1282,40 @@ function renderInfo(){
    ========================================================================= */
 const SS_PLAN_PITCH = "Okay. We offer a residential protection plan that gives you the same type of managed security we use for our clients, starting at $14.95 a month. It protects up to two computers and includes guaranteed virus protection. Would you like me to show you the options?";
 
-const SALES_SCRIPTS = [
+// Icons and colours are picked from these presets — never free-typed — so a
+// saved script can't inject markup into the page.
+const SS_ICONS = {
+  phone:   '<rect x="6" y="2" width="12" height="20" rx="2.4"/><path d="M11 18h2"/>',
+  computer:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  device:  '<rect x="3" y="4" width="12" height="9" rx="1.5"/><path d="M6 20h6M9 16v4"/><rect x="16" y="9" width="6" height="11" rx="1.4"/>',
+  shield:  '<path d="M12 3l8 3.5v5c0 4.6-3.3 8.6-8 9.5-4.7-.9-8-4.9-8-9.5v-5z"/><path d="M9.2 12.2l2 2 3.6-4"/>',
+  star:    '<path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.2l5.9-.9z"/>',
+  chat:    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M7 8h10M7 12h6"/>',
+  tag:     '<path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.4"/>',
+  clock:   '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  dollar:  '<path d="M12 2v20"/><path d="M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.5s2.2 3 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/>',
+  wrench:  '<path d="M15.5 3.5a5.5 5.5 0 0 0-6.9 7.1L3 16.2 6.8 20l5.6-5.6a5.5 5.5 0 0 0 7.1-6.9l-3.2 3.2-2.8-.7-.7-2.8z"/>'
+};
+const SS_ICON_LABELS = { phone:"Phone", computer:"Computer", device:"Tablet / console", shield:"Shield", star:"Star",
+  chat:"Speech bubble", tag:"Price tag", clock:"Clock", dollar:"Dollar", wrench:"Wrench" };
+const SS_TINTS = {
+  amber:  { label:"Amber",  tint:"#E28313", soft:"#FCEBD3" },
+  blue:   { label:"Blue",   tint:"#2F73C4", soft:"#E2ECF8" },
+  purple: { label:"Purple", tint:"#7C5AC2", soft:"#EDE7F8" },
+  green:  { label:"Green",  tint:"#1E7A55", soft:"#E4F1EB" },
+  gold:   { label:"Gold",   tint:"#E0A020", soft:"#FDF1DF" },
+  teal:   { label:"Teal",   tint:"#0E7C86", soft:"#DDF0F1" },
+  slate:  { label:"Slate",  tint:"#5A6472", soft:"#E8EBF0" }
+};
+function ssIcon(s){ return SS_ICONS[s && s.iconKey] || SS_ICONS.chat; }
+function ssTint(s){ return SS_TINTS[s && s.tintKey] || SS_TINTS.amber; }
+
+const SALES_SCRIPTS_BUILTIN = [
   {
     id:"screen-protector",
     title:"Screen Protector",
     short:"Phone screen check-in",
-    tint:"#E28313", tintSoft:"#FCEBD3",
-    icon:'<rect x="6" y="2" width="12" height="20" rx="2.4"/><path d="M11 18h2"/>',
+    iconKey:"phone", tintKey:"amber",
     when:"During check-in for a phone screen repair — before the repair is performed.",
     blocks:[
       { say:"Since we’re putting a brand-new screen on your phone, would you like us to protect it with a screen protector? It includes free lifetime replacements." }
@@ -1296,8 +1325,7 @@ const SALES_SCRIPTS = [
     id:"computer-priority",
     title:"Computer Priority Service",
     short:"Computer check-in · $100",
-    tint:"#2F73C4", tintSoft:"#E2ECF8",
-    icon:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    iconKey:"computer", tintKey:"blue",
     when:"During computer check-in.",
     blocks:[
       { say:"From here, you have two options. Our normal queue is typically 2 to 3 business days before a technician begins diagnostics. Or, for an additional $100, you can skip the queue and receive a diagnostic response within 24 hours. Which option would you like to go with?" }
@@ -1307,8 +1335,7 @@ const SALES_SCRIPTS = [
     id:"device-priority",
     title:"Tablet / Game Console Priority Service",
     short:"Tablet or console check-in · $75",
-    tint:"#7C5AC2", tintSoft:"#EDE7F8",
-    icon:'<rect x="3" y="4" width="12" height="9" rx="1.5"/><path d="M6 20h6M9 16v4"/><rect x="16" y="9" width="6" height="11" rx="1.4"/>',
+    iconKey:"device", tintKey:"purple",
     when:"During tablet or game console check-in.",
     blocks:[
       { say:"From here, you have two options. Our normal queue is typically 2 to 3 business days before a technician begins working on your device. Or, for an additional $75, you can skip the queue and your device will be the next one worked on. Which option would you like to go with?" }
@@ -1318,8 +1345,7 @@ const SALES_SCRIPTS = [
     id:"protection-plans",
     title:"Residential Protection Plans",
     short:"Computer check-in · new computer purchase",
-    tint:"#1E7A55", tintSoft:"#E4F1EB",
-    icon:'<path d="M12 3l8 3.5v5c0 4.6-3.3 8.6-8 9.5-4.7-.9-8-4.9-8-9.5v-5z"/><path d="M9.2 12.2l2 2 3.6-4"/>',
+    iconKey:"shield", tintKey:"green",
     when:"Primarily during computer check-in, or when a customer purchases a computer from Computer Warriors.",
     blocks:[
       { sub:"Computer check-in" },
@@ -1378,20 +1404,17 @@ const SALES_SCRIPTS = [
     id:"google-review",
     title:"Google Review",
     short:"At pickup",
-    tint:"#E0A020", tintSoft:"#FDF1DF",
-    icon:'<path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.2l5.9-.9z"/>',
+    iconKey:"star", tintKey:"gold",
     when:"At pickup, after the customer interaction is complete.",
     blocks:[
       { say:"Would you say you had a 5-star experience with us today?", label:"Start with" },
       { branch:[
         { tone:"good", label:"If yes",
-          icon:'<path d="M20 6L9 17l-5-5"/>',
           blocks:[
             { say:"That’s great to hear. Would you mind leaving us a 5-star review on Google?" },
             { say:"Perfect. If you have your phone with you, it only takes a couple of seconds.", label:"If they agree" }
           ]},
         { tone:"alert", label:"If no",
-          icon:'<path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/>',
           blocks:[
             { say:"I’m sorry to hear that. One thing that’s really important to us is constant improvement. Can you tell me where we fell short?" }
           ]}
@@ -1401,13 +1424,15 @@ const SALES_SCRIPTS = [
 ];
 
 /* ---- block renderers (reuse the console's say / note / accordion styles) ---- */
+const SS_PATH_YES = '<path d="M20 6L9 17l-5-5"/>';
+const SS_PATH_NO  = '<path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/>';
 function ssBlock(b){
   if(b.sub)    return `<div class="ss-sub">${esc(b.sub)}</div>`;
   if(b.say)    return sayBlock(b.say, b.label || "Say this");
   if(b.pause)  return `<div class="ss-pause">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}${esc(b.pause)}</div>`;
   if(b.note)   return noteBlock(b.note, b.warn, b.label);
   if(b.branch) return `<div class="ss-branch">`+b.branch.map(p=>
-      `<div class="ss-path ${esc(p.tone||'')}"><div class="ss-path-h">${p.icon?ic(p.icon):''}${esc(p.label)}</div>${p.blocks.map(ssBlock).join('')}</div>`
+      `<div class="ss-path ${p.tone==='alert'?'alert':'good'}"><div class="ss-path-h">${ic(p.tone==='alert'?SS_PATH_NO:SS_PATH_YES)}${esc(p.label)}</div>${(p.blocks||[]).map(ssBlock).join('')}</div>`
     ).join('')+`</div>`;
   return '';
 }
@@ -1420,19 +1445,66 @@ function ssObjectionsBlock(s){
     + s.objections.map((o,i)=>`<div class="reveal" data-ssrev="${i}">${o.blocks.map(ssBlock).join('')}</div>`).join('');
 }
 function ssCard(s){
-  const body = noteBlock(s.when, false, "When to use")
+  const body = (s.when ? noteBlock(s.when, false, "When to use") : '')
     + (s.blocks||[]).map(ssBlock).join('')
     + ssObjectionsBlock(s)
     + (s.after||[]).map(ssBlock).join('');
-  return `<div class="acc ss-card" style="--flow:${esc(s.tint)}">
+  const c = ssTint(s);
+  return `<div class="acc ss-card" style="--flow:${c.tint}">
     <button class="acc-head">
-      <span class="ss-ic" style="--tint:${esc(s.tint)};--tint-soft:${esc(s.tintSoft)}">${ic(s.icon)}</span>
+      <span class="ss-ic" style="--tint:${c.tint};--tint-soft:${c.soft}">${ic(ssIcon(s))}</span>
       <span class="acc-title">${esc(s.title)}</span>
       <span class="acc-meta">${esc(s.short)}</span>
       <span class="acc-arr">${ic('<path d="M6 9l6 6 6-6"/>')}</span>
     </button>
     <div class="acc-body">${body}</div>
   </div>`;
+}
+
+/* The scripts an employee sees: the admin override when one is saved and
+   valid, otherwise the built-ins above. Anything arriving from the config
+   store is rebuilt field by field (ssClean) — no key we don't know about
+   reaches the page, and icons/colours collapse to presets. */
+function salesScripts(){
+  const o = ADMIN_CFG && ADMIN_CFG.salesScripts;
+  const clean = ssClean(o);
+  return clean.length ? clean : SALES_SCRIPTS_BUILTIN;
+}
+const SS_TXT = v => (typeof v==='string' || typeof v==='number') ? String(v) : '';
+function ssCleanBlocks(arr, depth){
+  if(!Array.isArray(arr)) return [];
+  const out=[];
+  arr.forEach(b=>{
+    if(!b || typeof b!=='object') return;
+    if(SS_TXT(b.sub))   return out.push({ sub:SS_TXT(b.sub) });
+    if(SS_TXT(b.pause)) return out.push({ pause:SS_TXT(b.pause) });
+    if(SS_TXT(b.note))  return out.push({ note:SS_TXT(b.note), label:SS_TXT(b.label)||undefined });
+    if(SS_TXT(b.say))   return out.push({ say:SS_TXT(b.say), label:SS_TXT(b.label)||undefined });
+    if(Array.isArray(b.branch) && !depth){
+      const paths=b.branch.slice(0,2).map(pth=>({
+        tone: pth && pth.tone==='alert' ? 'alert' : 'good',
+        label: SS_TXT(pth && pth.label) || 'If yes',
+        blocks: ssCleanBlocks(pth && pth.blocks, 1)
+      }));
+      if(paths.length) out.push({ branch:paths });
+    }
+  });
+  return out;
+}
+function ssClean(arr){
+  if(!Array.isArray(arr)) return [];
+  return arr.filter(x=>x && typeof x==='object' && SS_TXT(x.title)).map((x,i)=>({
+    id: SS_TXT(x.id) || ('script-'+(i+1)),
+    title: SS_TXT(x.title),
+    short: SS_TXT(x.short),
+    when: SS_TXT(x.when),
+    iconKey: SS_ICONS[x.iconKey] ? x.iconKey : 'chat',
+    tintKey: SS_TINTS[x.tintKey] ? x.tintKey : 'amber',
+    blocks: ssCleanBlocks(x.blocks, 0),
+    objections: Array.isArray(x.objections) ? x.objections.filter(o=>o && SS_TXT(o.q))
+      .map(o=>({ q:SS_TXT(o.q), blocks:ssCleanBlocks(o.blocks, 0) })) : [],
+    after: ssCleanBlocks(x.after, 0)
+  }));
 }
 
 function renderSalesScripts(){
@@ -1450,7 +1522,7 @@ function renderSalesScripts(){
       <div class="ss-toolbar">
         <button class="ss-expand" id="ssExpand">Expand all</button>
       </div>
-      <div class="ss-list" id="ssList">${SALES_SCRIPTS.map(ssCard).join('')}</div>
+      <div class="ss-list" id="ssList">${salesScripts().map(ssCard).join('')}</div>
     </div></div>`;
   wireSalesScripts();
 }
@@ -2112,6 +2184,8 @@ function goNext(id){
    ========================================================================= */
 function rerenderCurrent(){
   if(document.getElementById('cwAdmin')) return;
+  if(stage.querySelector('#ssList')) return renderSalesScripts();   // sales scripts page
+  if(stage.querySelector('#ssOpen')) return renderInfo();           // info page
   if(!state) renderHome();
   else if(state.mode==="device"&&state.dr) renderDevice(state.dr);
   else renderStep();
@@ -2181,6 +2255,197 @@ function primeDefaults(){
   }catch(e){}
 }
 
+
+/* =========================================================================
+   SALES SCRIPT MANAGER — the "In-store sales scripts" tab of the admin panel.
+   Edits a working copy (SS_DRAFT) of whatever the page is currently showing;
+   Save writes it to the same /api/config store as the call scripts, under
+   `salesScripts`. Delete every script (or hit Restore) and the key is dropped,
+   so the built-ins come back.
+   ========================================================================= */
+let SS_DRAFT = [];        // working copy while the panel is open
+let SS_DIRTY = false;     // has anything been changed this session?
+let SS_CLEAR = false;     // "restore built-ins" — save by omitting the key
+let ssaView = { mode:'list', i:0 };
+
+const SS_SAY_LABELS = ["Say this","Then say","Start with","Then ask","If they agree","If they want to hear the options"];
+const SS_BLOCK_KINDS = [
+  { k:"say",    label:"Say this — words to read aloud" },
+  { k:"sub",    label:"Heading — splits a long script into parts" },
+  { k:"pause",  label:"Aside — e.g. “Allow the customer to answer.”" },
+  { k:"note",   label:"Note — guidance, not spoken" },
+  { k:"branch", label:"Yes / No paths — two side-by-side answers" }
+];
+function ssaNewBlock(kind){
+  if(kind==='say')    return { say:'', label:'Say this' };
+  if(kind==='sub')    return { sub:'' };
+  if(kind==='pause')  return { pause:'Allow the customer to answer.' };
+  if(kind==='note')   return { note:'', label:'Note' };
+  if(kind==='branch') return { branch:[
+    { tone:'good',  label:'If yes', blocks:[{ say:'', label:'Say this' }] },
+    { tone:'alert', label:'If no',  blocks:[{ say:'', label:'Say this' }] } ] };
+  return null;
+}
+function ssaNewScript(){
+  return { id:'script-'+(SS_DRAFT.length+1), title:'New script', short:'', when:'',
+    iconKey:'chat', tintKey:'amber', blocks:[ssaNewBlock('say')], objections:[], after:[] };
+}
+const ssaClone = v => JSON.parse(JSON.stringify(v));
+// Arrays are addressed by a dotted path inside the script being edited;
+// '' means the script list itself.
+function ssaArr(path){
+  if(!path) return SS_DRAFT;
+  const a = deepGet(SS_DRAFT[ssaView.i], path);
+  return Array.isArray(a) ? a : [];
+}
+function ssaMove(arr,i,d){ const j=i+d; if(j<0||j>=arr.length) return; const t=arr[i]; arr[i]=arr[j]; arr[j]=t; }
+
+/* ---- markup ---- */
+function ssaBtns(arrPath,i){
+  return `<span class="ssa-btns">`
+    + `<button class="ssa-mini" data-act="b-up" data-arr="${esc(arrPath)}" data-i="${i}" title="Move up">↑</button>`
+    + `<button class="ssa-mini" data-act="b-down" data-arr="${esc(arrPath)}" data-i="${i}" title="Move down">↓</button>`
+    + `<button class="ssa-mini del" data-act="b-del" data-arr="${esc(arrPath)}" data-i="${i}" title="Remove">×</button></span>`;
+}
+function ssaAddPicker(arrPath, nested){
+  const opts = SS_BLOCK_KINDS.filter(k=>!(nested && k.k==='branch'))
+    .map(k=>`<option value="${k.k}">${esc(k.label)}</option>`).join('');
+  return `<select class="ssa-add" data-act="b-add" data-arr="${esc(arrPath)}"><option value="">+ Add to the script…</option>${opts}</select>`;
+}
+function ssaField(kind,path,val,ph,rows){
+  const tag = rows ? `<textarea class="ssa-in" data-path="${esc(path)}" rows="${rows}" placeholder="${esc(ph||'')}">${esc(val||'')}</textarea>`
+                   : `<input class="ssa-in" data-path="${esc(path)}" value="${esc(val||'')}" placeholder="${esc(ph||'')}">`;
+  return tag;
+}
+function ssaBlocksHTML(arr, base, nested){
+  const rows = (arr||[]).map((b,i)=>{
+    const path = base+'.'+i;
+    let kind='say', badge='Say', inner='';
+    if(b.sub!==undefined){
+      kind='sub'; badge='Heading';
+      inner = ssaField('sub', path+'.sub', b.sub, 'Computer check-in');
+    } else if(b.pause!==undefined){
+      kind='pause'; badge='Aside';
+      inner = ssaField('pause', path+'.pause', b.pause, 'Allow the customer to answer.');
+    } else if(b.note!==undefined){
+      kind='note'; badge='Note';
+      inner = `<div class="ssa-lbl-row"><span class="ssa-lbl-cap">Label</span>${ssaField('label', path+'.label', b.label, 'Note')}</div>`
+        + ssaField('note', path+'.note', b.note, 'Guidance for the employee — not read aloud', 2);
+    } else if(b.branch!==undefined){
+      kind='branch'; badge='Yes / No';
+      inner = `<div class="ssa-paths">` + (b.branch||[]).map((pth,pi)=>
+          `<div class="ssa-path ${pth.tone==='alert'?'alert':'good'}">`
+          + `<div class="ssa-lbl-row"><span class="ssa-lbl-cap">Heading</span>${ssaField('label', path+'.branch.'+pi+'.label', pth.label, 'If yes')}</div>`
+          + ssaBlocksHTML(pth.blocks||[], path+'.branch.'+pi+'.blocks', true)
+          + `</div>`).join('') + `</div>`;
+    } else {
+      inner = `<div class="ssa-lbl-row"><span class="ssa-lbl-cap">Label</span>`
+        + `<input class="ssa-in" list="ssaLabels" data-path="${esc(path+'.label')}" value="${esc(b.label||'Say this')}"></div>`
+        + ssaField('say', path+'.say', b.say, 'The exact words to read aloud', 3);
+    }
+    return `<div class="ssa-blk ssa-${kind}"><div class="ssa-blk-top"><span class="ssa-badge">${badge}</span>${ssaBtns(base,i)}</div>${inner}</div>`;
+  }).join('');
+  return `<div class="ssa-blks">${rows}${ssaAddPicker(base, nested)}</div>`;
+}
+function ssaObjHTML(s){
+  const rows = (s.objections||[]).map((o,i)=>
+    `<div class="ssa-obj"><div class="ssa-blk-top">`
+    + `<span class="ssa-badge">If they say</span>${ssaBtns('objections',i)}</div>`
+    + `<input class="ssa-in" data-path="objections.${i}.q" value="${esc(o.q||'')}" placeholder="“I already have antivirus.”">`
+    + `<div class="ssa-nest">${ssaBlocksHTML(o.blocks||[], 'objections.'+i+'.blocks', true)}</div></div>`).join('');
+  return `<div class="ssa-objs">${rows}<button class="ssa-add-btn" data-act="obj-add">+ Add an objection</button></div>`;
+}
+function ssaListHTML(){
+  const rows = SS_DRAFT.map((s,i)=>{
+    const c = ssTint(s);
+    return `<div class="ssa-row">`
+      + `<span class="ssa-ic" style="--tint:${c.tint};--tint-soft:${c.soft}">${ic(ssIcon(s))}</span>`
+      + `<span class="ssa-row-txt"><b>${esc(s.title||'Untitled script')}</b><small>${esc(s.short||'—')}</small></span>`
+      + `<span class="ssa-btns">`
+      + `<button class="ssa-mini" data-act="s-up" data-i="${i}" title="Move up">↑</button>`
+      + `<button class="ssa-mini" data-act="s-down" data-i="${i}" title="Move down">↓</button>`
+      + `<button class="ssa-mini" data-act="s-edit" data-i="${i}">Edit</button>`
+      + `<button class="ssa-mini del" data-act="s-del" data-i="${i}">Delete</button></span></div>`;
+  }).join('');
+  return `<div class="ssa-bar"><div class="ssa-bar-txt">${SS_DRAFT.length} script${SS_DRAFT.length===1?'':'s'} — this order is the order at the counter.</div>`
+    + `<button class="ssa-new" data-act="s-new">+ New script</button></div>`
+    + `<div class="ssa-list">${rows || '<div class="ssa-none">No scripts — save now and the built-in five come back.</div>'}</div>`
+    + `<div class="ssa-foot"><button class="ssa-link" data-act="s-restore">Restore the built-in scripts</button>`
+    + `<span class="ssa-hint">Changes go live for everyone when you press Save changes.</span></div>`;
+}
+function ssaEditHTML(){
+  const s = SS_DRAFT[ssaView.i]; if(!s) return ssaListHTML();
+  const icons = Object.keys(SS_ICONS).map(k=>`<option value="${k}"${s.iconKey===k?' selected':''}>${esc(SS_ICON_LABELS[k]||k)}</option>`).join('');
+  const tints = Object.keys(SS_TINTS).map(k=>`<option value="${k}"${s.tintKey===k?' selected':''}>${esc(SS_TINTS[k].label)}</option>`).join('');
+  return `<div class="ssa-bar"><button class="ssa-mini" data-act="s-back">← All scripts</button>`
+    + `<div class="ssa-bar-txt">${esc(s.title||'Untitled script')}</div></div>`
+    + `<div class="ssa-grid">`
+    + `<label class="ssa-f"><span>Title</span>${ssaField('t','title',s.title,'Screen Protector')}</label>`
+    + `<label class="ssa-f"><span>Card note</span>${ssaField('t','short',s.short,'Phone screen check-in')}</label>`
+    + `<label class="ssa-f"><span>Icon</span><select class="ssa-in" data-path="iconKey" data-re="1">${icons}</select></label>`
+    + `<label class="ssa-f"><span>Colour</span><select class="ssa-in" data-path="tintKey" data-re="1">${tints}</select></label>`
+    + `</div>`
+    + `<label class="ssa-f"><span>When to use</span>${ssaField('t','when',s.when,'During check-in for a phone screen repair.',2)}</label>`
+    + `<div class="ssa-sec">The script</div>${ssaBlocksHTML(s.blocks||[], 'blocks', false)}`
+    + `<div class="ssa-sec">Objections<small>tapped open one at a time at the counter</small></div>${ssaObjHTML(s)}`
+    + `<div class="ssa-sec">Below the objections<small>e.g. key positioning</small></div>${ssaBlocksHTML(s.after||[], 'after', true)}`;
+}
+function ssaRender(){
+  const box = document.getElementById('cwaSales'); if(!box) return;
+  box.innerHTML = `<datalist id="ssaLabels">${SS_SAY_LABELS.map(l=>`<option value="${esc(l)}"></option>`).join('')}</datalist>`
+    + (ssaView.mode==='edit' ? ssaEditHTML() : ssaListHTML());
+}
+
+/* ---- wiring: typing updates the draft in place, structure changes re-render ---- */
+function ssaWire(){
+  const box = document.getElementById('cwaSales'); if(!box) return;
+  const touch=()=>{ SS_DIRTY=true; SS_CLEAR=false; };
+
+  box.addEventListener('input', e=>{
+    const t=e.target; if(!t.dataset || !t.dataset.path) return;
+    touch();
+    if(ssaView.mode==='edit') deepSet(SS_DRAFT[ssaView.i], t.dataset.path, t.value);
+  });
+  box.addEventListener('change', e=>{
+    const t=e.target;
+    if(t.dataset && t.dataset.act==='b-add' && t.value){
+      const arr=ssaArr(t.dataset.arr), b=ssaNewBlock(t.value);
+      if(b){ arr.push(b); touch(); ssaRender(); }
+      return;
+    }
+    if(t.dataset && t.dataset.path && t.dataset.re){
+      deepSet(SS_DRAFT[ssaView.i], t.dataset.path, t.value); touch(); ssaRender();
+    }
+  });
+  box.addEventListener('click', e=>{
+    const b=e.target.closest('[data-act]'); if(!b) return;
+    const act=b.dataset.act, i=+(b.dataset.i||0);
+    if(act==='s-new'){ SS_DRAFT.push(ssaNewScript()); touch(); ssaView={mode:'edit', i:SS_DRAFT.length-1}; return ssaRender(); }
+    if(act==='s-edit'){ ssaView={mode:'edit', i}; return ssaRender(); }
+    if(act==='s-back'){ ssaView={mode:'list', i:0}; return ssaRender(); }
+    if(act==='s-up'){ ssaMove(SS_DRAFT,i,-1); touch(); return ssaRender(); }
+    if(act==='s-down'){ ssaMove(SS_DRAFT,i,1); touch(); return ssaRender(); }
+    if(act==='s-del'){
+      if(!confirm('Delete “'+(SS_DRAFT[i].title||'this script')+'”? It disappears from the counter page when you save.')) return;
+      SS_DRAFT.splice(i,1); touch(); ssaView={mode:'list', i:0}; return ssaRender();
+    }
+    if(act==='s-restore'){
+      if(!confirm('Throw away every saved change and go back to the five built-in scripts?')) return;
+      SS_DRAFT = ssaClone(SALES_SCRIPTS_BUILTIN); SS_DIRTY=false; SS_CLEAR=true;
+      ssaView={mode:'list', i:0}; return ssaRender();
+    }
+    if(act==='obj-add'){
+      const s=SS_DRAFT[ssaView.i]; if(!Array.isArray(s.objections)) s.objections=[];
+      s.objections.push({ q:'', blocks:[ssaNewBlock('say')] }); touch(); return ssaRender();
+    }
+    if(act==='b-up' || act==='b-down' || act==='b-del'){
+      const arr=ssaArr(b.dataset.arr);
+      if(act==='b-del') arr.splice(i,1); else ssaMove(arr,i,act==='b-up'?-1:1);
+      touch(); return ssaRender();
+    }
+  });
+}
+
 const ADMIN_CSS = `<style>
 #cwAdmin .cwa-wrap{position:fixed;inset:0;z-index:9999;background:rgba(17,23,33,.55);display:flex;align-items:center;justify-content:center;padding:18px;font-family:var(--body)}
 #cwAdmin .cwa-card{background:#fff;border-radius:16px;box-shadow:var(--sh-3);padding:26px;width:100%;max-width:360px}
@@ -2191,7 +2456,7 @@ const ADMIN_CSS = `<style>
 #cwAdmin .cwa-row{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
 #cwAdmin .cwa-btn{background:linear-gradient(180deg,#F0A03A,var(--accent));color:#241202;border:none;border-radius:10px;padding:11px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--body)}
 #cwAdmin .cwa-btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--muted);font-weight:600}
-#cwAdmin .cwa-panel{background:var(--paper);border-radius:16px;box-shadow:var(--sh-3);width:100%;max-width:800px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+#cwAdmin .cwa-panel{background:var(--paper);border-radius:16px;box-shadow:var(--sh-3);width:100%;max-width:880px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
 #cwAdmin .cwa-top{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;background:#fff;border-bottom:1px solid var(--line)}
 #cwAdmin .cwa-title{font-family:var(--disp);font-size:18px;font-weight:700}
 #cwAdmin .cwa-body{overflow-y:auto;padding:18px 22px}
@@ -2206,12 +2471,77 @@ const ADMIN_CSS = `<style>
 #cwAdmin .cwa-save{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:14px 22px;background:#fff;border-top:1px solid var(--line)}
 #cwAdmin .cwa-status{font-size:13px;color:var(--muted)}
 #cwAdmin .cwa-status.ok{color:var(--good)} #cwAdmin .cwa-status.err{color:var(--alert)}
+#cwAdmin .cwa-tabs{display:flex;gap:6px;margin-left:auto;margin-right:14px}
+#cwAdmin .cwa-tab{background:var(--paper-2);border:1.5px solid var(--line);border-radius:9px;padding:8px 13px;font-family:var(--body);font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+#cwAdmin .cwa-tab:hover{color:var(--ink);border-color:#CFD7E1}
+#cwAdmin .cwa-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
+#cwAdmin input.ssa-in,#cwAdmin select.ssa-in,#cwAdmin .ssa-add{width:100%;box-sizing:border-box;font-family:var(--body);font-size:13.5px;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;outline:none}
+#cwAdmin .ssa-in:focus,#cwAdmin .ssa-add:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,138,32,.14)}
+#cwAdmin .ssa-bar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+#cwAdmin .ssa-bar-txt{font-size:12.5px;color:var(--muted);font-weight:600;flex:1;min-width:0}
+#cwAdmin .ssa-new{background:linear-gradient(180deg,#F0A03A,var(--accent));color:#241202;border:none;border-radius:9px;padding:9px 15px;font-family:var(--body);font-size:13px;font-weight:700;cursor:pointer}
+#cwAdmin .ssa-list{display:flex;flex-direction:column;gap:8px}
+#cwAdmin .ssa-row{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px}
+#cwAdmin .ssa-ic{width:30px;height:30px;border-radius:8px;flex:none;display:grid;place-items:center;background:var(--tint-soft);color:var(--tint)}
+#cwAdmin .ssa-ic svg{width:16px;height:16px}
+#cwAdmin .ssa-row-txt{flex:1;min-width:0}
+#cwAdmin .ssa-row-txt b{display:block;font-size:14px;font-weight:600}
+#cwAdmin .ssa-row-txt small{color:var(--faint);font-size:11.5px}
+#cwAdmin .ssa-btns{display:flex;gap:5px;flex:none;margin-left:auto}
+#cwAdmin .ssa-mini{background:var(--paper-2);border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-family:var(--body);font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;line-height:1.2}
+#cwAdmin .ssa-mini:hover{color:var(--ink);border-color:#CFD7E1;background:#fff}
+#cwAdmin .ssa-mini.del:hover{color:var(--alert);border-color:var(--alert-line);background:var(--alert-soft)}
+#cwAdmin .ssa-none{padding:18px;text-align:center;color:var(--faint);font-size:13px;background:#fff;border:1px dashed var(--line);border-radius:11px}
+#cwAdmin .ssa-foot{display:flex;align-items:center;gap:12px;margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);flex-wrap:wrap}
+#cwAdmin .ssa-link{background:none;border:none;color:var(--accent-deep);font-family:var(--body);font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0}
+#cwAdmin .ssa-hint{font-size:11.5px;color:var(--faint);margin-left:auto}
+#cwAdmin .ssa-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+#cwAdmin .ssa-f{display:block;margin-bottom:10px}
+#cwAdmin .ssa-f > span{display:block;font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px}
+#cwAdmin .ssa-sec{font-family:var(--disp);font-size:12px;font-weight:700;color:var(--accent-deep);text-transform:uppercase;letter-spacing:1px;margin:20px 0 9px;display:flex;align-items:baseline;gap:9px}
+#cwAdmin .ssa-sec small{font-size:10.5px;letter-spacing:0;text-transform:none;color:var(--faint);font-weight:500}
+#cwAdmin .ssa-blks{display:flex;flex-direction:column;gap:9px}
+#cwAdmin .ssa-blk{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 12px}
+#cwAdmin .ssa-blk.ssa-say{border-left:3px solid var(--navy)}
+#cwAdmin .ssa-blk.ssa-note{border-left:3px solid var(--accent)}
+#cwAdmin .ssa-blk.ssa-branch{border-left:3px solid var(--good)}
+#cwAdmin .ssa-blk-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+#cwAdmin .ssa-badge{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint)}
+#cwAdmin .ssa-lbl-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+#cwAdmin .ssa-lbl-cap{font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);flex:none}
+#cwAdmin .ssa-lbl-row .ssa-in{max-width:230px}
+#cwAdmin .ssa-paths{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#cwAdmin .ssa-path{border:1.5px solid var(--line);border-radius:10px;padding:10px}
+#cwAdmin .ssa-path.good{border-color:#C9E2D5;background:var(--good-soft)}
+#cwAdmin .ssa-path.alert{border-color:var(--alert-line);background:var(--alert-soft)}
+#cwAdmin .ssa-objs{display:flex;flex-direction:column;gap:9px}
+#cwAdmin .ssa-obj{background:var(--paper-2);border:1.5px solid var(--line);border-radius:11px;padding:11px 12px}
+#cwAdmin .ssa-nest{margin-top:9px;padding-left:11px;border-left:2px solid var(--line)}
+#cwAdmin .ssa-add-btn{background:#fff;border:1.5px dashed var(--line);border-radius:10px;padding:10px;font-family:var(--body);font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+#cwAdmin .ssa-add-btn:hover{border-color:var(--accent);color:var(--ink)}
+#cwAdmin .ssa-add{color:var(--muted);font-weight:600;font-size:12.5px;border-style:dashed;cursor:pointer}
+@media(max-width:760px){
+  #cwAdmin .cwa-top{flex-wrap:wrap;gap:10px}
+  #cwAdmin .cwa-tabs{margin:0;order:3;width:100%}
+  #cwAdmin .cwa-tab{flex:1}
+  #cwAdmin .ssa-grid,#cwAdmin .ssa-paths{grid-template-columns:1fr}
+}
 </style>`;
 
 function openAdmin(){
   primeDefaults();
   let el = document.getElementById('cwAdmin');
   if(!el){ el = document.createElement('div'); el.id='cwAdmin'; document.body.appendChild(el); }
+  if(!CFG_OK){
+    el.innerHTML = ADMIN_CSS + `<div class="cwa-wrap"><div class="cwa-card">
+      <div class="cwa-h">Scripts not loaded</div>
+      <div class="cwa-err" style="min-height:0">The saved scripts couldn't be read just now, so editing is blocked — opening the editor without them would overwrite what's stored. Check the connection and reload the page.</div>
+      <div class="cwa-row"><button class="cwa-btn ghost" id="cwaCancel">Close</button><button class="cwa-btn" id="cwaReload">Reload</button></div>
+    </div></div>`;
+    el.querySelector('#cwaCancel').onclick=closeAdmin;
+    el.querySelector('#cwaReload').onclick=()=>location.reload();
+    return;
+  }
   el.innerHTML = ADMIN_CSS + `<div class="cwa-wrap"><div class="cwa-card">
     <div class="cwa-h">Admin — enter code</div>
     <input type="password" id="cwaPin" class="cwa-pin" placeholder="Code" autocomplete="off" inputmode="numeric">
@@ -2225,9 +2555,13 @@ function openAdmin(){
 }
 function closeAdmin(){
   const el=document.getElementById('cwAdmin'); if(el) el.remove();
-  if(location.hash==='#admin') history.replaceState(null,'',location.pathname+location.search);
+  // `history` is a local array in this file — the browser API needs `window.`
+  if(location.hash==='#admin' || isAdminPath()) { try{ window.history.replaceState(null,'','/'); }catch(e){} }
   rerenderCurrent();
 }
+// The admin panel answers at /admin (rewritten to this page by vercel.json)
+// as well as the original #admin.
+function isAdminPath(){ return /^\/admin\/?$/i.test(location.pathname); }
 async function adminUnlock(el){
   const pin = el.querySelector('#cwaPin').value;
   const errEl = el.querySelector('#cwaGateErr'); errEl.textContent='Checking…';
@@ -2249,13 +2583,32 @@ function renderAdminEditor(el, pin){
     return `<div class="cwa-group"><div class="cwa-gh">${esc(g.title)}</div>${g.note?`<div class="cwa-gnote">${esc(g.note)}</div>`:''}${fields}</div>`;
   }).join('');
   el.innerHTML = ADMIN_CSS + `<div class="cwa-wrap"><div class="cwa-panel">
-    <div class="cwa-top"><div class="cwa-title">Edit call scripts</div><button class="cwa-btn ghost" id="cwaClose">Close</button></div>
-    <div class="cwa-body">${groups}</div>
+    <div class="cwa-top">
+      <div class="cwa-title">Edit scripts</div>
+      <div class="cwa-tabs">
+        <button class="cwa-tab on" data-tab="call">Call scripts</button>
+        <button class="cwa-tab" data-tab="sales">In-store sales scripts</button>
+      </div>
+      <button class="cwa-btn ghost" id="cwaClose">Close</button>
+    </div>
+    <div class="cwa-body">
+      <div id="cwaCall">${groups}</div>
+      <div id="cwaSales" style="display:none"></div>
+    </div>
     <div class="cwa-save"><span class="cwa-status" id="cwaStatus"></span><button class="cwa-btn" id="cwaSave">Save changes</button></div>
   </div></div>`;
   el.querySelector('#cwaClose').onclick=closeAdmin;
   el.querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{ const ta=el.querySelector('textarea[data-k="'+b.dataset.reset+'"]'); if(ta) ta.value = DEF[b.dataset.reset]||''; });
   el.querySelector('#cwaSave').onclick=()=>saveAdmin(el, pin);
+
+  // sales scripts: edit a working copy of whatever the page shows right now
+  SS_DRAFT = ssaClone(salesScripts()); SS_DIRTY=false; SS_CLEAR=false; ssaView={mode:'list', i:0};
+  ssaRender(); ssaWire();
+  el.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+    el.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on', x===b));
+    el.querySelector('#cwaCall').style.display  = b.dataset.tab==='call'  ? '' : 'none';
+    el.querySelector('#cwaSales').style.display = b.dataset.tab==='sales' ? '' : 'none';
+  });
 }
 async function saveAdmin(el, pin){
   const status = el.querySelector('#cwaStatus'); status.textContent='Saving…'; status.className='cwa-status';
@@ -2264,10 +2617,19 @@ async function saveAdmin(el, pin){
     const k=ta.dataset.k, v=ta.value;
     if(v !== (DEF[k]||'')) deepSet(config, k, v);
   });
+  // Keep the saved sales scripts unless "restore built-ins" was used — the
+  // config object is rebuilt from scratch here, so an omitted key is a delete.
+  if(!SS_CLEAR && (SS_DIRTY || ssClean(ADMIN_CFG.salesScripts).length)){
+    const scripts = ssClean(SS_DRAFT);
+    if(scripts.length) config.salesScripts = scripts;
+  }
   try{
     const r = await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin, config})});
     const d = await r.json();
-    if(d && d.ok){ ADMIN_CFG = config; status.textContent='Saved — scripts updated on every device.'; status.className='cwa-status ok'; }
+    if(d && d.ok){
+      ADMIN_CFG = config; SS_DIRTY=false; SS_CLEAR=false; SS_DRAFT = ssaClone(salesScripts());
+      status.textContent='Saved — scripts updated on every device.'; status.className='cwa-status ok';
+    }
     else { status.textContent = (d && d.error==='invalid_pin') ? 'Incorrect code — not saved.' : 'Save failed — try again.'; status.className='cwa-status err'; }
   }catch(e){ status.textContent='Network error — not saved.'; status.className='cwa-status err'; }
 }
@@ -2287,7 +2649,7 @@ goHome();
 if(BOOT_HASH==='#scripts') renderSalesScripts();
 Promise.all([loadAdminConfig(), loadPricing()]).then(()=>{
   if(BOOT_HASH==='#scripts') renderSalesScripts(); else rerenderCurrent();
-  if(location.hash==='#admin') openAdmin();
+  if(location.hash==='#admin' || isAdminPath()) openAdmin();
 });
 </script>
 </body>
