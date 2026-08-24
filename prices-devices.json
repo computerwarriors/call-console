@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-08-17T10:00:03.375Z",
+  "_generated": "2026-08-24T10:00:03.372Z",
   "_warranty": {
     "screen": "Lifetime warranty on parts and labor, plus one free re-repair if the screen cracks again within 12 months.",
     "screenLine": "Premium-grade display, color-matched and touch-tested. Covered for life against defects — and if it cracks again within 12 months, we'll repair it once for free.",
@@ -39,7 +39,7 @@
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
-          "price": 189.95,
+          "price": 159.95,
           "warranty": "Lifetime warranty"
         },
         "Back Glass / Rear Housing Repair": {
@@ -197,7 +197,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 139.95,
+          "price": 149.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -219,7 +219,7 @@
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
-          "price": 149.95,
+          "price": 139.95,
           "warranty": "Lifetime warranty"
         },
         "Back Glass / Rear Housing Repair": {
@@ -1093,7 +1093,7 @@
       },
       "Galaxy S24 Ultra": {
         "Screen Repair": {
-          "price": 404.95,
+          "price": 374.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
