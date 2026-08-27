@@ -457,6 +457,12 @@
   @media(max-width:600px){.cheat li{display:block}.cheat .ct{width:auto;margin-bottom:2px}}
 
 
+  /* trade-in embed: the widget wants ~320px, which is wider than the panel
+     leaves on a phone — let it run to the edges there instead of clipping. */
+  @media(max-width:560px){
+    .bb-embed{margin-left:-18px;margin-right:-18px;border-radius:0;border-left:none;border-right:none}
+  }
+
   /* admin link, bottom corner of the info page — deliberately quiet */
   .info-admin{display:flex;justify-content:flex-end;margin-top:22px;padding-top:14px;border-top:1px dashed var(--line)}
   .info-admin-btn{
@@ -1233,15 +1239,19 @@ function screen(o){
 }
 
 function renderHome(){
-  const tile=(id,f,isDevice)=>`<button class="tile" data-${isDevice?'device':'flow'}="${id}" style="--tint:${f.color||f.tint};--tint-soft:${f.tintSoft||'#EEF0F4'}"><span class="ic">${ic(f.icon)}</span><span class="txt"><h3>${esc(f.label)}</h3><p>${esc(f.desc)}</p></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
-  const tiles=[tile('computer',FLOWS.computer,false),tile('device',DEVICE_META,true),tile('support',FLOWS.support,false)].join('');
+  const tile=(id,f,kind)=>`<button class="tile" data-${kind}="${id}" style="--tint:${f.color||f.tint};--tint-soft:${f.tintSoft||'#EEF0F4'}"><span class="ic">${ic(f.icon)}</span><span class="txt"><h3>${esc(f.label)}</h3><p>${esc(f.desc)}</p></span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`;
+  const tiles=[tile('computer',FLOWS.computer,'flow'),tile('device',DEVICE_META,'device'),tile('support',FLOWS.support,'flow'),tile('buyback',BUYBACK_META,'page')].join('');
   const left=sayBlock(t('greeting.hello',"Thanks for calling Computer Warriors, this is [name]. Who do I have the pleasure of speaking with?"))
     + noteBlock(t('greeting.note1',"Get the customer's name and use it naturally during the call."))
     + sayBlock(t('greeting.help',"Hey [name], how can we help you today?"),"Then say")
     + noteBlock(t('greeting.note2',"Ask about the device type, the issue, or whether they need remote / onsite help."));
   const right=`<div class="pane-title">What's the call about?</div><div class="pane-sub">Pick the closest match \u2014 switch anytime with Home.</div><div class="tiles">${tiles}</div>`;
   stage.innerHTML=screen({home:true,accent:'var(--accent)',eyebrow:"Every call starts here",title:"Greet the caller",left,right});
-  stage.querySelectorAll('.tile').forEach(t=>t.onclick=()=> t.dataset.device ? startDevice() : startFlow(t.dataset.flow));
+  stage.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{
+    if(t.dataset.device) return startDevice();
+    if(t.dataset.page==='buyback') return renderBuyback();
+    startFlow(t.dataset.flow);
+  });
 }
 
 function renderInfo(){
@@ -1580,6 +1590,56 @@ function ssSetHash(on){
     const want = on ? location.pathname+location.search+'#scripts' : location.pathname+location.search;
     if(on ? location.hash!=='#scripts' : location.hash==='#scripts') window.history.replaceState(null,'',want);
   }catch(e){ /* file:// or blocked history — the page still works */ }
+}
+
+/* =========================================================================
+   BUY-BACK / TRADE-IN — the caller wants to SELL us a device.
+   The Reusely widget lives in its own page (buyback.html) and is embedded
+   here in an iframe, the same convention as the Cognito and Acuity forms —
+   that keeps the vendor's scripts, styles and floating button off the
+   console's own page. buyback.html is served from this domain, so the frame
+   can be measured and grown as the customer moves through the steps.
+   ========================================================================= */
+const BUYBACK_META = { label:"Sell or Trade In a Device", color:"#1E7A55", tintSoft:"#E4F1EB",
+  desc:"Customer wants to sell us a phone, tablet, Mac, console or watch.",
+  icon:'<path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.4"/>' };
+
+let _bbFit = null;
+function renderBuyback(){
+  stage.innerHTML=`
+    <div class="flowbar">
+      <button class="back" id="bbBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button>
+      <span class="flowtag"><span class="dot" style="background:${BUYBACK_META.color}"></span>Trade-in</span>
+    </div>
+    <div class="panel" style="--flow:${BUYBACK_META.color}"><div class="panel-body">
+      <div class="eyebrow">Buy-back</div>
+      <h2 class="step-title">Sell or trade in a device</h2>
+      <p class="step-sub">Look up what we can offer — phones, tablets, Mac, game systems, Chromebooks and watches.</p>
+      ${noteBlock("Pick the category, then the model and condition, and the offer comes up on screen. On a call, read the offer and invite them in; at the counter, turn the screen around and let the customer work through it.")}
+      <div class="embed bb-embed">
+        <div class="embed-lbl">Trade-in quote</div>
+        <iframe id="bbFrame" src="buyback.html" title="Trade-in quote" style="border:0;width:100%;height:760px"></iframe>
+        <a class="embed-open" href="buyback.html" target="_blank" rel="noopener">Open in a new tab \u2197</a>
+      </div>
+    </div></div>`;
+  document.getElementById('bbBack').onclick=goHome;
+  wireBuybackFrame();
+}
+// Grow the frame to fit the widget. Same-origin, so we can read its height;
+// the widget changes height as the customer steps through it without firing
+// anything we can listen to, hence the interval — it stops with the page.
+function wireBuybackFrame(){
+  const fr=document.getElementById('bbFrame'); if(!fr) return;
+  const fit=()=>{
+    if(!document.body.contains(fr)){ clearInterval(_bbFit); _bbFit=null; return; }
+    try{
+      const d=fr.contentDocument; if(!d || !d.body) return;
+      const h=Math.max(d.body.scrollHeight, d.documentElement.scrollHeight);
+      if(h>240 && Math.abs(h+24-parseInt(fr.style.height||0,10))>8) fr.style.height=(h+24)+'px';
+    }catch(e){ /* cross-origin or not ready — keep the fixed height */ }
+  };
+  fr.addEventListener('load',fit);
+  clearInterval(_bbFit); _bbFit=setInterval(fit,400);
 }
 
 /* =========================================================================
