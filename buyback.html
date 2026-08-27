@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade-In Quote — Computer Warriors</title>
+<!-- Standalone page for the Reusely buy-back widget. The Call Console embeds
+     this in an iframe (see renderBuyback in index.html) so the widget's own
+     scripts, styles and float button stay off the console's own page — the
+     same convention the Cognito and Acuity forms use. Also opens on its own. -->
+<style>
+  html,body{margin:0;background:#fff;font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;color:#111721}
+  .wrap{max-width:900px;margin:0 auto;padding:18px 16px 40px}
+  /* On a phone the console's own panel already supplies the side margin —
+     keeping it here too squeezes the widget past the edge of the frame. */
+  @media(max-width:560px){ .wrap{padding:12px 2px 24px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <script src="https://widget.reusely.com/v3.js"></script>
+  <div class="buyback-widget"></div>
+  <script defer>
+    new Buyback({
+      tenantId: "57739375f3c3a1d0df0c1445a99ddbe854460474eb700045cf6d72649eb97e86",
+      disableFloatButton: false
+    })
+  </script>
+</div>
+</body>
+</html>
