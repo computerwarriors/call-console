@@ -457,6 +457,17 @@
   @media(max-width:600px){.cheat li{display:block}.cheat .ct{width:auto;margin-bottom:2px}}
 
 
+  /* admin link, bottom corner of the info page — deliberately quiet */
+  .info-admin{display:flex;justify-content:flex-end;margin-top:22px;padding-top:14px;border-top:1px dashed var(--line)}
+  .info-admin-btn{
+    background:none;border:none;padding:5px 3px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:7px;
+    font-family:var(--body);font-size:10.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);
+    transition:color .14s;
+  }
+  .info-admin-btn:hover{color:var(--accent-deep)}
+  .info-admin-btn svg{width:13px;height:13px;stroke-width:1.8}
+
   /* ============ in-store sales scripts (Info ▸ In-Store Sales Scripts) ============ */
   .info-nav{display:grid;gap:11px;margin:0 0 26px}
   .ss-toolbar{display:flex;justify-content:flex-end;margin:0 0 10px}
@@ -1256,6 +1267,9 @@ function renderInfo(){
         <button class="btn-primary" id="apptBtn">${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')} Book an in-store appointment</button>
         <span class="hint">Opens the online scheduler — great for a customer who wants a set drop-off time.</span>
       </div>
+      <div class="info-admin">
+        <button class="info-admin-btn" id="adminBtn" title="Edit the call and sales scripts">${ic('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-3-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.3 6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V2a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.5 1z"/>')} Admin</button>
+      </div>
     </div></div>`;
   document.getElementById('backBtn').onclick=()=>{
     if(!state) renderHome();
@@ -1264,6 +1278,7 @@ function renderInfo(){
   };
   document.getElementById('apptBtn').onclick=()=>renderAppointments(renderInfo, APPT_LINKS.general);
   document.getElementById('ssOpen').onclick=renderSalesScripts;
+  document.getElementById('adminBtn').onclick=openAdmin;
 }
 
 
