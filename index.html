@@ -117,6 +117,11 @@
   .flowtag{display:inline-flex;align-items:center;gap:9px;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);font-weight:600}
   .flowtag .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
   .steptrack{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.5px}
+  /* "Start over" — pinned to the top-right corner of the panel on every
+     in-call screen, so dropping a call never means reaching for Home. */
+  .restart{position:absolute;top:22px;right:24px;z-index:2}
+  .restart:hover{transform:none;color:var(--accent);border-color:var(--accent)}
+  .panel:has(.restart) .panel-head{padding-right:170px}
 
   .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh-2);overflow:hidden;position:relative}
   .panel::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--flow,var(--accent))}
@@ -524,7 +529,7 @@
   /* narrow screens: the fixed Info/Home buttons already sit top-right, and
      Home returns to the console — so drop the duplicate (and the long tag,
      which would slide under them) from the flowbar. */
-  @media(max-width:700px){ #ssConsole,#ssTag{display:none} }
+  @media(max-width:700px){ #ssConsole,#ssTag,.restart{display:none} }
   @media(max-width:600px){
     /* stack the card head so a long script name isn't squeezed into a column */
     .ss-card .acc-head{flex-wrap:wrap;padding:14px 15px;gap:11px}
@@ -1041,12 +1046,19 @@ function drChrome(accent,crumb,total,idx){
     + `<span class="flowtag"><span class="dot" style="background:${accent}"></span>${esc(crumb)}</span>`
     + (total?`<span class="steptrack">Step ${idx} / ${total}</span>`:'') + `</div>`;
 }
+// Shared "Start over" control for every in-flow screen: drops the current call
+// and returns to Greet. Wired by wireRestart() after each render.
+function restartBtn(){
+  return `<button class="back restart" type="button" data-restart title="Drop this call and go back to Greet">${ic('<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>')} Start over</button>`;
+}
+function wireRestart(){ stage.querySelectorAll('[data-restart]').forEach(b=>b.onclick=goHome); }
 function renderDevice(dr){
   state.dr=dr;
-  if(dr.stage==="brand")  return renderBrand();
-  if(dr.stage==="model")  return renderModel();
-  if(dr.stage==="repair") return renderRepair();
-  if(dr.stage==="result") return renderResult();
+  if(dr.stage==="brand")       renderBrand();
+  else if(dr.stage==="model")  renderModel();
+  else if(dr.stage==="repair") renderRepair();
+  else if(dr.stage==="result") renderResult();
+  wireRestart();
 }
 
 function renderBrand(){
@@ -1227,6 +1239,7 @@ function screen(o){
     : `<div class="split solo"><div class="pane pane-choices">${right}</div></div>`;
   let h=(o.flowbar||'');
   h+=`<div class="panel${o.home?' greet-home':''}" style="--flow:${o.accent||'var(--accent)'};--flow-soft:${o.accentSoft||'#EEF0F4'}">`;
+  if(!o.home) h+=restartBtn();
   h+=`<div class="panel-head">`;
   if(o.eyebrow) h+=`<div class="eyebrow">${esc(o.eyebrow)}</div>`;
   if(o.title) h+=`<h2 class="step-title">${o.title}</h2>`;
@@ -1695,13 +1708,14 @@ function renderAppointments(back, url){
   const src = url || APPT_LINKS.general;
   stage.innerHTML=`
     <div class="flowbar"><button class="back" id="apptBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><span class="flowtag"><span class="dot" style="background:var(--accent)"></span>Appointments</span></div>
-    <div class="panel" style="--flow:var(--accent)"><div class="panel-body">
+    <div class="panel" style="--flow:var(--accent)">${restartBtn()}<div class="panel-body">
       <div class="eyebrow">In-store appointment</div>
       <h2 class="step-title">Schedule a time to come in</h2>
       <p class="step-sub">Pick a slot below. Walk-ins are always welcome too — this just holds a set time.</p>
       ${embedBlock({ label:"In-store appointment scheduling", src, height:800, allow:"payment" })}
     </div></div>`;
   document.getElementById('apptBack').onclick=ret;
+  wireRestart();
 }
 
 // Small "Schedule an appointment" button placed at the bottom of the left
@@ -2191,6 +2205,7 @@ function wireStep(step){
   const prev=document.getElementById('prevBtn'); if(prev) prev.onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} else renderHome(); };
   const next=document.getElementById('nextBtn'); if(next) next.onclick=()=>goNext(step.next);
   const finish=document.getElementById('finishBtn'); if(finish) finish.onclick=goHome;
+  wireRestart();
   wireApptButtons(()=>renderStep(), APPT_LINKS.computer);
 
   stage.querySelectorAll('.choice').forEach(b=>b.onclick=()=>goNext(step.choices[+b.dataset.choice].next));
