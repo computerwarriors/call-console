@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-08-31T10:00:02.757Z",
+  "_generated": "2026-09-07T10:00:03.164Z",
   "_warranty": {
     "screen": "Lifetime warranty on parts and labor, plus one free re-repair if the screen cracks again within 12 months.",
     "screenLine": "Premium-grade display, color-matched and touch-tested. Covered for life against defects — and if it cracks again within 12 months, we'll repair it once for free.",
@@ -13,7 +13,7 @@
     "models": {
       "iPhone 17 Pro Max": {
         "Screen Repair": {
-          "price": 259.95,
+          "price": 219.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -31,7 +31,7 @@
       },
       "iPhone 17 Pro": {
         "Screen Repair": {
-          "price": 229.95,
+          "price": 199.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -49,7 +49,7 @@
       },
       "iPhone 17": {
         "Screen Repair": {
-          "price": 229.95,
+          "price": 199.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -67,7 +67,7 @@
       },
       "iPhone 17e": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -85,7 +85,7 @@
       },
       "iPhone 16 Pro Max": {
         "Screen Repair": {
-          "price": 259.95,
+          "price": 209.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -103,7 +103,7 @@
       },
       "iPhone 16 Pro": {
         "Screen Repair": {
-          "price": 219.95,
+          "price": 199.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -121,7 +121,7 @@
       },
       "iPhone 16 Plus": {
         "Screen Repair": {
-          "price": 209.95,
+          "price": 189.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -139,7 +139,7 @@
       },
       "iPhone 16": {
         "Screen Repair": {
-          "price": 199.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -157,7 +157,7 @@
       },
       "iPhone 16e": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -175,7 +175,7 @@
       },
       "iPhone 15 Pro Max": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -193,7 +193,7 @@
       },
       "iPhone 15 Pro": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -211,7 +211,7 @@
       },
       "iPhone 15 Plus": {
         "Screen Repair": {
-          "price": 199.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -229,7 +229,7 @@
       },
       "iPhone 15": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 209.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -247,7 +247,7 @@
       },
       "iPhone 14 Pro Max": {
         "Screen Repair": {
-          "price": 199.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -259,13 +259,13 @@
           "warranty": "Lifetime warranty"
         },
         "Back Glass / Rear Housing Repair": {
-          "price": 369.95,
+          "price": 339.95,
           "warranty": "Lifetime warranty"
         }
       },
       "iPhone 14 Pro": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -283,7 +283,7 @@
       },
       "iPhone 14 Plus": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -301,7 +301,7 @@
       },
       "iPhone 14": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -319,7 +319,7 @@
       },
       "iPhone 13 Pro Max": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -337,7 +337,7 @@
       },
       "iPhone 13 Pro": {
         "Screen Repair": {
-          "price": 199.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -355,7 +355,7 @@
       },
       "iPhone 13": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -391,7 +391,7 @@
       },
       "iPhone 12 Pro Max": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 169.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -409,7 +409,7 @@
       },
       "iPhone 12 Pro": {
         "Screen Repair": {
-          "price": 169.95,
+          "price": 159.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -427,7 +427,7 @@
       },
       "iPhone 12": {
         "Screen Repair": {
-          "price": 169.95,
+          "price": 159.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -463,7 +463,7 @@
       },
       "iPhone 11 Pro Max": {
         "Screen Repair": {
-          "price": 169.95,
+          "price": 159.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -481,7 +481,7 @@
       },
       "iPhone 11 Pro": {
         "Screen Repair": {
-          "price": 189.95,
+          "price": 199.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -493,7 +493,7 @@
           "warranty": "Lifetime warranty"
         },
         "Back Glass / Rear Housing Repair": {
-          "price": 259.95,
+          "price": 249.95,
           "warranty": "Lifetime warranty"
         }
       },
@@ -517,7 +517,7 @@
       },
       "iPhone Air": {
         "Screen Repair": {
-          "price": 249.95,
+          "price": 209.95,
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
@@ -547,7 +547,7 @@
           "warranty": "Lifetime warranty"
         },
         "Back Glass / Rear Housing Repair": {
-          "price": 209.95,
+          "price": 219.95,
           "warranty": "Lifetime warranty"
         }
       },
@@ -852,7 +852,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 174.95,
+          "price": 179.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
@@ -880,7 +880,7 @@
           "warranty": "Lifetime warranty"
         },
         "Battery Repair": {
-          "price": 174.95,
+          "price": 179.95,
           "warranty": "1-year warranty"
         },
         "Charging Port Repair": {
