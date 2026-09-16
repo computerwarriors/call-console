@@ -704,12 +704,13 @@ const FLOWS = {
           {label:"Project Request",sub:"A defined project \u2014 scoped and quoted",next:"project"},
           {label:"Managed IT Services",sub:"For a business looking for someone to manage their IT",next:"business"}
         ]},
-      // Native Autotask-backed intake (replaced the Cognito embed 2026-09-16).
-      // Rollback: swap native:"soho" for
-      //   embed:{ label:"Retail intake form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/1", height:950, allow:"payment" }
-      { id:"retail", title:"Immediate Retail Need", sub:"Pick the company and contact from Autotask, or add them, then describe the request.", end:true, checklist:CHECKLIST_SUPPORT, payment:true, native:"soho" },
-      { id:"project", title:"Project Request", end:true, checklist:CHECKLIST_SUPPORT,
-        embed:{ label:"Project request form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/8", height:804, allow:"payment" } },
+      // Native Autotask-backed intake forms (replaced the Cognito embeds 2026-09-16).
+      // Rollback: swap native:"..." for the embed:
+      //   retail  -> embed:{ label:"Retail intake form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/1", height:950, allow:"payment" }
+      //   project -> embed:{ label:"Project request form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/8", height:804, allow:"payment" }
+      // Deep links: /#soho opens the retail intake, /#project opens the project request (for Teams / onsite techs).
+      { id:"retail", title:"Immediate Retail Need", sub:"Pick the company and contact from Autotask, or add them, then describe the request.", end:true, checklist:CHECKLIST_SUPPORT, payment:true, native:"support" },
+      { id:"project", title:"Project Request", sub:"Pick the company and contact from Autotask, or add them, then describe what needs to be quoted.", end:true, checklist:CHECKLIST_SUPPORT, native:"project" },
       { id:"business", title:"Business IT Services", end:true, checklist:CHECKLIST_SUPPORT,
         say:"Great \u2014 we do offer managed IT support for businesses. So I can point you to the right team, roughly how many computers or workstations does the business run?",
         note:"15 or more workstations \u2192 CW IT Support. Under 15 \u2192 SOHO. Pick the tier below to load their form.",
@@ -2207,7 +2208,10 @@ function wireSupportIntake(){
 }
 
 /* =========================================================================
-   SOHO INTAKE — native form (Autotask-backed), replaces the Cognito embed.
+   SOHO INTAKE — native forms (Autotask-backed), replace the Cognito embeds.
+   Two kinds share the company/contact picker:
+     "support" — Immediate Need  -> /api/support-intake (ticket; new customers held for card)
+     "project" — Project Request -> /api/project-intake (opportunity + Teams alert)
 
    The page pulls every active Autotask company through /api/autotask
    (n8n "Call Console — Autotask Lookup", read-only). The tech picks the
@@ -2224,6 +2228,7 @@ const SOHO_REQUEST_TYPES = ["General Support","New PC On-Site Delivery and Setup
 const SOHO_PRIORITY_FALLBACK = [   // used only if the live picklist can't be loaded
   {value:4,label:"P1 Emergency"},{value:1,label:"P2 Quick Response"},{value:3,label:"P3 Normal Response"},{value:2,label:"P4 Extended Response"} ];
 const SOHO_DEFAULT_PRIORITY = 3;   // P3 Normal Response
+const SOHO_QUOTE_BY = ["ASAP \u2014 within 48 hours","This week","Within 2 weeks","Within 30 days","No rush \u2014 planning ahead"];
 const SOHO_CACHE_MS = 5*60*1000;
 
 let SOHO_CACHE = { companies:null, at:0, priorities:null };
@@ -2237,8 +2242,9 @@ function sfState(v){
 }
 let SF = null;   // form state for the step currently on screen
 
-function sohoFormBlock(){
-  return `<div class="embed sf-embed"><div class="embed-lbl">SOHO intake — Autotask</div><div class="sf" id="sfRoot">
+function sohoFormBlock(kind){
+  const lbl = kind==='project' ? 'Project request \u2014 Autotask' : 'SOHO intake \u2014 Autotask';
+  return `<div class="embed sf-embed"><div class="embed-lbl">${lbl}</div><div class="sf" id="sfRoot">
     <div class="sf-wait"><span class="dotp"></span>Loading companies from Autotask…</div>
   </div></div>`;
 }
@@ -2260,9 +2266,10 @@ async function sfLoadPriorities(){
   SOHO_CACHE.priorities=list; return list;
 }
 
-function wireSohoForm(){
+function wireSohoForm(kind){
   const root=document.getElementById('sfRoot'); if(!root) return;
-  SF={ companies:[], priorities:[], q:'', company:null, contacts:null, contact:null, mode:'pick',   // pick | existing | newContact | newCompany
+  SF={ kind: kind==='project' ? 'project' : 'support',
+       companies:[], priorities:[], q:'', company:null, contacts:null, contact:null, mode:'pick',   // pick | existing | newContact | newCompany
        cat:'Residential', busy:false, msg:'', done:null, f:{} };
   Promise.all([sfLoadCompanies(false), sfLoadPriorities()]).then(([cos,pri])=>{
     if(!document.getElementById('sfRoot')) return;   // navigated away
@@ -2311,7 +2318,9 @@ function sfRender(){
   if(SF.done){
     const d=SF.done;
     h=`<div class="sf-done"><div class="pay-title"><span class="tick">${ic('<path d="M20 6 9 17l-5-5"/>')}</span>Request submitted</div>
-      <p class="pay-sub">${sfEsc(d.company)}${d.contact?' — '+sfEsc(d.contact):''}. Existing customer, so the ticket is being created in Autotask now (request ${sfEsc(d.requestId)}). Nothing else is needed here.</p>
+      <p class="pay-sub">${sfEsc(d.company)}${d.contact?' \u2014 '+sfEsc(d.contact):''}. ${SF.kind==='project'
+        ? 'The opportunity is being created in Autotask and the SOHO Project Lead chat is being notified (request '+sfEsc(d.requestId)+').'
+        : 'Existing customer, so the ticket is being created in Autotask now (request '+sfEsc(d.requestId)+'). Nothing else is needed here.'}</p>
       <div class="pay-actions"><button class="btn-primary" id="sfFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish</button><button class="btn-ghost" id="sfAnother">Submit another request</button></div></div>`;
     root.innerHTML=h;
     document.getElementById('sfFinish').onclick=goHome;
@@ -2370,7 +2379,18 @@ function sfRender(){
 
   /* ---- 3. Request ---- */
   const contactReady = SF.mode==='newCompany' || SF.mode==='newContact' || !!SF.contact;
-  if(contactReady){
+  if(contactReady && SF.kind==='project'){
+    h+=`<div class="sf-sec"><div class="sf-num">3</div><div class="sf-secbody"><div class="sf-h">Project request</div>
+      ${sfField('sf_req','What is being requested? (as much detail as possible \u2014 this becomes the opportunity description)',`<textarea class="sf-in" id="sf_req" rows="6" placeholder="What they want done, how many machines/users, existing equipment, site details, anything the estimator needs to quote it\u2026">${sfEsc(sfV('sf_req'))}</textarea>`)}
+      <div class="sf-grid">
+        ${sfField('sf_by','When do they need the quote by?',`<select class="sf-in" id="sf_by"><option value="">Select\u2026</option>${SOHO_QUOTE_BY.map(t=>`<option ${sfV('sf_by')===t?'selected':''}>${sfEsc(t)}</option>`).join('')}</select>`,true)}
+        ${sfField('sf_who','Submitted by',`<select class="sf-in" id="sf_who"><option value="">Select your name\u2026</option>${SOHO_TEAM.map(n=>`<option ${sfV('sf_who')===n?'selected':''}>${n}</option>`).join('')}</select>`,true)}
+      </div>
+      ${SF.msg?`<div class="pay-msg">${sfEsc(SF.msg)}</div>`:''}
+      <div class="pay-actions"><button class="btn-primary" id="sfSubmit" ${SF.busy?'disabled':''}>${SF.busy?'Submitting\u2026':ic('<path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9z"/>')+' Submit project request'}</button></div>
+    </div></div>`;
+  }
+  else if(contactReady){
     const pri=SF.priorities.map(p=>`<option value="${p.value}" ${String(sfV('sf_priority')||SOHO_DEFAULT_PRIORITY)===String(p.value)?'selected':''}>${sfEsc(p.label)}</option>`).join('');
     h+=`<div class="sf-sec"><div class="sf-num">3</div><div class="sf-secbody"><div class="sf-h">Request</div>
       <div class="sf-grid">
@@ -2513,7 +2533,12 @@ function sfValidate(){
     if(!f.sf_state||!f.sf_state.trim()) need.push('state'); else if(!US_STATES[sfState(f.sf_state).code]) need.push('a valid state (e.g. NC)');
     if(!f.sf_zip||!/^\d{5}(-\d{4})?$/.test(f.sf_zip.trim())) need.push('ZIP');
   }
-  if(!f.sf_desc||f.sf_desc.trim().length<10) need.push('a description (at least 10 characters)');
+  if(SF.kind==='project'){
+    if(!f.sf_req||f.sf_req.trim().length<10) need.push('what is being requested (at least 10 characters)');
+    if(!f.sf_by) need.push('when they need the quote by');
+  } else {
+    if(!f.sf_desc||f.sf_desc.trim().length<10) need.push('a description (at least 10 characters)');
+  }
   if(!f.sf_who) need.push('who submitted it');
   return need;
 }
@@ -2556,8 +2581,34 @@ function sfBuildPayload(){
     TypeOfRequest: f.sf_type || SOHO_REQUEST_TYPES[0],
     TicketPriority: pri.label,
     TicketPriority_Value: Number(pri.value),
-    TicketDescription: f.sf_desc.trim(),
+    TicketDescription: String(f.sf_desc||'').trim(),
     WhoSubmittedTheTicket: f.sf_who
+  };
+}
+
+// Field names mirror the Cognito "Project Request" form so the n8n
+// "SOHO Team: Opportunity Submission Form" workflow runs unchanged. That form
+// branched on "IsTheRequestorTheOneWhoWillApproveTheQuote" to decide whether
+// to use the picked contact or create one, so it carries the contact-exists flag.
+function sfBuildProjectPayload(){
+  const b=sfBuildPayload(), f=SF.f;
+  const isNewCo=SF.mode==='newCompany', contactExists=b.DoesTheContactExist;
+  return {
+    CompanyNameIfApplicable: (isNewCo && SF.cat==='Business') ? b.CompanyName2 : null,
+    CompanyName2: b.CompanyName2,
+    Entry: { Number: b.Entry.Number, DateSubmitted: new Date().toISOString() },
+    Source: 'call-console',
+    DoesTheCompanyOrResidentialCustomerExist: b.DoesTheCompanyExist,
+    DoesTheCompanyExist: b.DoesTheCompanyExist,
+    IsTheRequestorTheOneWhoWillApproveTheQuote: contactExists,
+    DoesTheContactExist: contactExists,
+    CompanyID: b.CompanyID, ContactID: b.ContactID,
+    RequestingContact: contactExists ? { Id:String(SF.contact.id), Label:SF.contact.name } : null,
+    CustomerCategory: b.CustomerCategory,
+    Name: b.Name, Phone: b.Phone, Email: b.Email, Address: b.Address,
+    WhatIsBeingRequestedProvideAsMuchDetailAsPossible: f.sf_req.trim(),
+    WhenDoTheyNeedThisQuoteBy: f.sf_by,
+    WhoSubmittedThisForm: f.sf_who
   };
 }
 
@@ -2567,10 +2618,13 @@ async function sfSubmit(){
   const need=sfValidate();
   if(need.length){ SF.msg='Still needed: '+need.join(', ')+'.'; sfRender(); return; }
   SF.msg=''; SF.busy=true; sfRender();
-  const payload=sfBuildPayload();
+  const isProject=SF.kind==='project';
+  let payload;
+  try{ payload=isProject ? sfBuildProjectPayload() : sfBuildPayload(); }
+  catch(e){ SF.busy=false; SF.msg='Could not build the request ('+String(e&&e.message||e)+'). Nothing was sent.'; sfRender(); return; }
   let d=null;
   try{
-    const r=await fetch('/api/support-intake',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload)});
+    const r=await fetch(isProject ? '/api/project-intake' : '/api/support-intake',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload)});
     d=await r.json();
   }catch(e){ d={ok:false,error:'network'}; }
   if(!SF) return;
@@ -2606,7 +2660,7 @@ function renderStep(){
   // RIGHT = what to do
   let right='';
   if(step.embed) right+=embedBlock(step.embed);
-  if(step.native==="soho") right+=sohoFormBlock();
+  if(step.native) right+=sohoFormBlock(step.native);
   if(step.sayAfterEmbed) right+=sayBlock(t(sk+'.sayAfterEmbed', step.sayAfterEmbed),"Once submitted, say");
   if(step.extras) right+=extrasBlock(step.extras);
   if(step.sections){ right+=`<div class="sec-lbl">Pricing &amp; coverage</div>`+step.sections.map(sectionBlock).join(''); }
@@ -2625,7 +2679,7 @@ function renderStep(){
 
   stage.innerHTML=screen({flowbar,accent:flow.color,accentSoft:flow.tintSoft,title:esc(step.title),sub:step.sub?esc(step.sub):'',left,right,full,footer});
   wireStep(step);
-  if(step.native==="soho") wireSohoForm();
+  if(step.native) wireSohoForm(step.native);
   if(step.payment) wireSupportIntake();
 }
 
@@ -3157,17 +3211,26 @@ new MutationObserver(scheduleFit).observe(stage,{childList:true,subtree:true});
 window.addEventListener('resize',scheduleFit);
 document.getElementById('homeBtn').onclick=goHome;
 document.getElementById('infoBtn').onclick=renderInfo;
+// Deep links for the SOHO forms: /#soho (immediate need) and /#project (project
+// request). Shared in Teams so onsite techs land straight on the form.
+const DEEP_STEPS = { '#soho':'retail', '#project':'project' };
+function openSupportStep(stepId){
+  const i=FLOWS.support.steps.findIndex(s=>s.id===stepId); if(i<0) return false;
+  state={flowId:'support',idx:i,actions:new Set()}; history=[]; renderStep(); return true;
+}
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#admin') openAdmin();
   else if(location.hash==='#scripts') renderSalesScripts();
+  else if(DEEP_STEPS[location.hash]) openSupportStep(DEEP_STEPS[location.hash]);
 });
 // #scripts is a bookmarkable deep link to the in-store sales scripts. Read it
 // before goHome() clears it, so a counter tablet opens straight to the scripts.
 const BOOT_HASH = location.hash;
 goHome();
 if(BOOT_HASH==='#scripts') renderSalesScripts();
+else if(DEEP_STEPS[BOOT_HASH]) openSupportStep(DEEP_STEPS[BOOT_HASH]);
 Promise.all([loadAdminConfig(), loadPricing()]).then(()=>{
-  if(BOOT_HASH==='#scripts') renderSalesScripts(); else rerenderCurrent();
+  if(BOOT_HASH==='#scripts') renderSalesScripts(); else if(DEEP_STEPS[BOOT_HASH] && state && state.flowId==='support') { /* already on the form; leave it */ } else rerenderCurrent();
   if(location.hash==='#admin' || isAdminPath()) openAdmin();
 });
 </script>
