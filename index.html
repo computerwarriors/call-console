@@ -353,6 +353,11 @@
   .sf-radios input{accent-color:var(--accent);width:16px;height:16px}
   .sf-info{font-size:13px;color:var(--muted);margin:-4px 0 12px}
   .sf-done{padding:4px 2px}
+  .sf-dd.addr{position:absolute;left:0;right:0;top:100%;z-index:5;max-height:280px}
+  .sf-none.tiny{font-size:10.5px;text-align:right;padding:4px 10px 2px;border-top:1px solid var(--line-soft)}
+  .sf-addrline{min-height:18px;margin:-4px 0 6px}
+  .sf-verified{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--good);background:var(--good-soft);border:1px solid #C9E2D5;border-radius:8px;padding:4px 9px}
+  .sf-verified svg{width:13px;height:13px}
   @media (max-width:640px){ .sf-grid,.sf-grid.three{grid-template-columns:1fr} }
 
   /* ================= appointment cta (info page) ================= */
@@ -2222,6 +2227,14 @@ const SOHO_DEFAULT_PRIORITY = 3;   // P3 Normal Response
 const SOHO_CACHE_MS = 5*60*1000;
 
 let SOHO_CACHE = { companies:null, at:0, priorities:null };
+const US_STATES = {AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",DC:"District of Columbia",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"};
+// Accepts "NC", "nc", "North Carolina", "north carolina" -> { code:"NC", name:"North Carolina" }
+function sfState(v){
+  const t=String(v||'').trim(); if(!t) return {code:'',name:''};
+  const up=t.toUpperCase(); if(US_STATES[up]) return {code:up,name:US_STATES[up]};
+  const hit=Object.keys(US_STATES).find(k=>US_STATES[k].toLowerCase()===t.toLowerCase());
+  return hit ? {code:hit,name:US_STATES[hit]} : {code:t,name:t};
+}
 let SF = null;   // form state for the step currently on screen
 
 function sohoFormBlock(){
@@ -2385,16 +2398,71 @@ function sfContactFields(withAddress){
     ${sfField('sf_email','Email',sfInput('sf_email','name@example.com',sfV('sf_email'),'email'),true)}
   </div>`;
   if(withAddress){
+    const sug=SF.addrSug||[];
+    const dd = (SF.addrOpen && sug.length) ? `<div class="sf-dd addr">${sug.map(o=>`<button class="sf-opt" data-place="${sfEsc(o.id)}"><span>${sfEsc(o.main)}</span><small>${sfEsc(o.secondary)}</small></button>`).join('')}<div class="sf-none tiny">Suggestions by Google</div></div>` : '';
+    const badge = SF.addrVerified ? `<span class="sf-verified">${ic('<path d="M20 6 9 17l-5-5"/>')} Verified — ${sfEsc(SF.addrVerified)}</span>` : (SF.addrAvail===false ? '' : `<span class="hint">Start typing the street — pick the match to fill and verify the address.</span>`);
     h+=`<div class="sf-grid">
-      ${sfField('sf_addr1','Address',sfInput('sf_addr1','Street address',sfV('sf_addr1')))}
+      <div class="sf-field"><label for="sf_addr1">Address</label><div class="sf-combo">${sfInput('sf_addr1','Street address',sfV('sf_addr1'))}${dd}</div></div>
       ${sfField('sf_addr2','',sfInput('sf_addr2','Suite / unit (optional)',sfV('sf_addr2')))}
     </div><div class="sf-grid three">
       ${sfField('sf_city','City',sfInput('sf_city','City',sfV('sf_city')))}
       ${sfField('sf_state','State',sfInput('sf_state','NC',sfV('sf_state')||'NC'))}
       ${sfField('sf_zip','ZIP',sfInput('sf_zip','28405',sfV('sf_zip')))}
-    </div><div class="hint" style="margin:-4px 0 10px">The address decides which shop (Wilmington or Jacksonville) the ticket is routed to.</div>`;
+    </div><div class="sf-addrline">${badge}</div>
+    <div class="hint" style="margin:0 0 10px">The address decides which shop (Wilmington or Jacksonville) the ticket is routed to.</div>`;
   }
   return h;
+}
+
+/* ---- Address autocomplete (Google Places via /api/address; silent no-op without a key) ---- */
+let _sfAddrTimer=null, _sfAddrSeq=0;
+function sfSession(){ if(!SF.addrSession) SF.addrSession=Math.random().toString(36).slice(2)+Date.now().toString(36); return SF.addrSession; }
+function sfWireAddress(){
+  const a1=document.getElementById('sf_addr1'); if(!a1) return;
+  if(SF.addrAvail===false) return;
+  a1.oninput=()=>{
+    SF.f.sf_addr1=a1.value; SF.addrVerified=''; 
+    clearTimeout(_sfAddrTimer);
+    const q=a1.value.trim();
+    if(q.length<3){ SF.addrSug=[]; SF.addrOpen=false; sfAddrPaint(); return; }
+    _sfAddrTimer=setTimeout(async()=>{
+      const seq=++_sfAddrSeq;
+      const d=await sfGet('/api/address?q='+encodeURIComponent(q)+'&session='+encodeURIComponent(sfSession()));
+      if(!SF || seq!==_sfAddrSeq) return;
+      if(d && d.error==='not_configured'){ SF.addrAvail=false; SF.addrSug=[]; SF.addrOpen=false; sfAddrPaint(); return; }
+      SF.addrAvail=true; SF.addrSug=(d && d.ok && d.suggestions)||[]; SF.addrOpen=true; sfAddrPaint();
+    },220);
+  };
+  a1.onkeydown=e=>{ if(e.key==='Escape'){ SF.addrOpen=false; sfAddrPaint(); } if(e.key==='Enter'){ e.preventDefault(); const f=document.querySelector('.sf-dd.addr .sf-opt'); if(f) f.click(); } };
+  // Close the list when focus really leaves the field. A re-render also fires
+  // blur (the old input is removed), but sfAddrPaint refocuses the new one, so
+  // check activeElement after the click/mousedown has had a chance to land.
+  a1.onblur=()=>{ setTimeout(()=>{ if(SF && SF.addrOpen && document.activeElement!==document.getElementById('sf_addr1')){ SF.addrOpen=false; sfAddrPaint(); } },180); };
+  ['sf_addr2','sf_city','sf_state','sf_zip'].forEach(id=>{ const el=document.getElementById(id); if(el) el.oninput=()=>{ SF.f[id]=el.value; if(SF.addrVerified){ SF.addrVerified=''; sfAddrPaint(); } }; });
+  document.querySelectorAll('.sf-dd.addr .sf-opt[data-place]').forEach(b=>b.onmousedown=e=>{ e.preventDefault(); sfPickAddress(b.dataset.place); });
+}
+// Re-render only the address rows so typing elsewhere isn't disturbed.
+function sfAddrPaint(){
+  const a1=document.getElementById('sf_addr1'); if(!a1) return;
+  const pos=a1.selectionStart, focused=document.activeElement===a1;
+  sfCapture(); sfRender();
+  if(focused){ const n=document.getElementById('sf_addr1'); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos);}catch(e){} } }
+}
+async function sfPickAddress(placeId){
+  const d=await sfGet('/api/address?place='+encodeURIComponent(placeId)+'&session='+encodeURIComponent(sfSession()));
+  if(!SF) return;
+  SF.addrSession='';   // Google session ends with the pick
+  SF.addrOpen=false; SF.addrSug=[];
+  if(!(d && d.ok && d.address)){ SF.msg="Couldn't fetch that address from Google — type it in by hand."; sfRender(); return; }
+  const a=d.address;
+  // sfRender() re-captures from the DOM first, so write the values into the
+  // inputs themselves (and SF.f) rather than SF.f alone.
+  const set=(id,v)=>{ SF.f[id]=v; const el=document.getElementById(id); if(el) el.value=v; };
+  set('sf_addr1', a.line1||SF.f.sf_addr1||''); if(a.line2) set('sf_addr2', a.line2);
+  set('sf_city', a.city||''); set('sf_state', a.stateCode||a.state||''); set('sf_zip', a.zip||'');
+  SF.addrVerified=a.formatted||[a.line1,a.city,a.stateCode,a.zip].filter(Boolean).join(', ');
+  sfRender();
+  const z=document.getElementById('sf_addr2'); if(z) z.focus();
 }
 
 function sfWire(){
@@ -2414,6 +2482,7 @@ function sfWire(){
     SF.contact=SF.contacts.find(c=>String(c.id)===sel.value)||null; sfRender();
   };
   document.querySelectorAll('input[name="sf_cat"]').forEach(r=>r.onchange=()=>{ SF.cat=r.value; sfRender(); });
+  sfWireAddress();
   on('sfSubmit','onclick',sfSubmit);
 }
 
@@ -2441,7 +2510,7 @@ function sfValidate(){
   if(SF.mode==='newCompany'){
     if(!f.sf_addr1||!f.sf_addr1.trim()) need.push('street address');
     if(!f.sf_city||!f.sf_city.trim()) need.push('city');
-    if(!f.sf_state||!f.sf_state.trim()) need.push('state');
+    if(!f.sf_state||!f.sf_state.trim()) need.push('state'); else if(!US_STATES[sfState(f.sf_state).code]) need.push('a valid state (e.g. NC)');
     if(!f.sf_zip||!/^\d{5}(-\d{4})?$/.test(f.sf_zip.trim())) need.push('ZIP');
   }
   if(!f.sf_desc||f.sf_desc.trim().length<10) need.push('a description (at least 10 characters)');
@@ -2457,9 +2526,13 @@ function sfBuildPayload(){
   const email = (isNewCo||isNewContact) ? String(f.sf_email||'').trim() : (SF.contact.email||'');
   const companyName = isNewCo ? (SF.cat==='Business' ? f.sf_coName.trim() : (first+' '+last).trim()) : SF.company.name;
   const pri=SF.priorities.find(p=>String(p.value)===String(f.sf_priority)) || {value:SOHO_DEFAULT_PRIORITY,label:'P3 Normal Response'};
+  const st = isNewCo ? sfState(f.sf_state) : {code:'',name:''};
+  // State is sent spelled out ("North Carolina"), matching what Cognito produced,
+  // so new Autotask company records look like the existing ones.
   const addr = isNewCo ? {
-    Line1:f.sf_addr1.trim(), Line2:String(f.sf_addr2||'').trim(), City:f.sf_city.trim(), State:f.sf_state.trim().toUpperCase(), PostalCode:f.sf_zip.trim(), Country:'United States'
-  } : { Line1:'', Line2:'', City:'', State:'', PostalCode:'', Country:'' };
+    Line1:f.sf_addr1.trim(), Line2:String(f.sf_addr2||'').trim(), City:f.sf_city.trim(), State:st.name, StateCode:st.code, PostalCode:f.sf_zip.trim(), Country:'United States', CountryCode:'US',
+    Verified: !!SF.addrVerified
+  } : { Line1:'', Line2:'', City:'', State:'', StateCode:'', PostalCode:'', Country:'', CountryCode:'', Verified:false };
   const full=[addr.Line1, addr.Line2, [addr.City, addr.State].filter(Boolean).join(', ')+(addr.PostalCode?' '+addr.PostalCode:'')].filter(s=>s&&s.trim()).join(', ');
   addr.FullAddress=full; addr.FullInternationalAddress=full?full+', United States':'';
   // Field names + nesting mirror the Cognito "SOHO - Support Request Form" so
