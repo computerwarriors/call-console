@@ -701,13 +701,13 @@ const FLOWS = {
       { id:"type", title:"What kind of support?",
         choices:[
           {label:"Immediate Need",sub:"Individual / Business \u2014 remote or onsite support",next:"retail"},
-          {label:"Immediate Need \u2014 Autotask form (beta)",sub:"New native form \u2014 companies & contacts pulled live from Autotask",next:"retail2"},
           {label:"Project Request",sub:"A defined project \u2014 scoped and quoted",next:"project"},
           {label:"Managed IT Services",sub:"For a business looking for someone to manage their IT",next:"business"}
         ]},
-      { id:"retail", title:"Immediate Retail Need", end:true, checklist:CHECKLIST_SUPPORT, payment:true,
-        embed:{ label:"Retail intake form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/1", height:950, allow:"payment" } },
-      { id:"retail2", title:"Immediate Retail Need", sub:"Pick the company and contact from Autotask, or add them, then describe the request.", end:true, checklist:CHECKLIST_SUPPORT, payment:true, native:"soho" },
+      // Native Autotask-backed intake (replaced the Cognito embed 2026-09-16).
+      // Rollback: swap native:"soho" for
+      //   embed:{ label:"Retail intake form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/1", height:950, allow:"payment" }
+      { id:"retail", title:"Immediate Retail Need", sub:"Pick the company and contact from Autotask, or add them, then describe the request.", end:true, checklist:CHECKLIST_SUPPORT, payment:true, native:"soho" },
       { id:"project", title:"Project Request", end:true, checklist:CHECKLIST_SUPPORT,
         embed:{ label:"Project request form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/8", height:804, allow:"payment" } },
       { id:"business", title:"Business IT Services", end:true, checklist:CHECKLIST_SUPPORT,
