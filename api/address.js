@@ -6,7 +6,7 @@
 //
 // Proxy to Google Places API (New). The key lives in the Vercel env var
 // GOOGLE_MAPS_KEY and never reaches the browser. Suggestions are biased to a
-// ~90-mile circle around the two shops (Wilmington / Jacksonville NC) and
+// ~30-mile circle around the two shops (Wilmington / Jacksonville NC) and
 // limited to the US. The `session` token groups the typing + the final pick
 // into one billed Autocomplete session (Google's pricing model).
 //
@@ -15,7 +15,7 @@
 // =============================================================================
 
 const KEY = process.env.GOOGLE_MAPS_KEY || "";
-const BIAS = { circle: { center: { latitude: 34.45, longitude: -77.65 }, radius: 150000 } };   // between Wilmington and Jacksonville
+const BIAS = { circle: { center: { latitude: 34.45, longitude: -77.65 }, radius: 50000 } };   // midpoint between Wilmington and Jacksonville (Google caps bias radius at 50 km)
 
 function comp(components, type, long) {
   const c = (components || []).find(x => Array.isArray(x.types) && x.types.includes(type));
