@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Call Console — Computer Warriors</title>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -709,7 +712,7 @@ const FLOWS = {
       //   retail  -> embed:{ label:"Retail intake form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/1", height:950, allow:"payment" }
       //   project -> embed:{ label:"Project request form", src:"https://www.cognitoforms.com/f/25rfMQ0wx0abhADc6qrIsA/8", height:804, allow:"payment" }
       // Deep links: /#soho opens the retail intake, /#project opens the project request (for Teams / onsite techs).
-      { id:"retail", title:"Immediate Retail Need", sub:"Pick the company and contact from Autotask, or add them, then describe the request.", end:true, checklist:CHECKLIST_SUPPORT, payment:true, native:"support" },
+      { id:"retail", title:"Immediate Need (SOHO)", sub:"Pick the company and contact from Autotask, or add them, then describe the request.", end:true, checklist:CHECKLIST_SUPPORT, payment:true, native:"support" },
       { id:"project", title:"Project Request", sub:"Pick the company and contact from Autotask, or add them, then describe what needs to be quoted.", end:true, checklist:CHECKLIST_SUPPORT, native:"project" },
       { id:"business", title:"Business IT Services", end:true, checklist:CHECKLIST_SUPPORT,
         say:"Great \u2014 we do offer managed IT support for businesses. So I can point you to the right team, roughly how many computers or workstations does the business run?",
