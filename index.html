@@ -3050,7 +3050,7 @@ function ssaWire(){
    payment profile by email (masked: brand, last 4, expiry), then open
    Authorize.Net's hosted page to edit the card in place or add a new one.
    Opens as an overlay so the intake form underneath keeps its state.
-   Backed by /api/card-on-file (team-code gated, entered once per session).
+   Backed by /api/card-on-file (not gated — masked values only).
    ========================================================================= */
 const COF_CSS = `<style>
 #cwCof .cof-wrap{position:fixed;inset:0;z-index:9998;background:rgba(17,23,33,.55);display:flex;align-items:flex-start;justify-content:center;padding:28px 18px;overflow-y:auto;font-family:var(--body)}
@@ -3075,20 +3075,18 @@ const COF_CSS = `<style>
 #cwCof .cof-note b{color:var(--ink)}
 </style>`;
 let COF = null;
-function cofPinGet(){ try{ return sessionStorage.getItem('cwCofPin')||sessionStorage.getItem('cwPpPin')||''; }catch(e){ return ''; } }
-function cofPinSet(v){ try{ sessionStorage.setItem('cwCofPin', v); }catch(e){} }
 async function cofApi(payload){
   const r = await fetch('/api/card-on-file', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(Object.assign({ pin: cofPinGet() }, payload)) });
+    body: JSON.stringify(payload) });
   return await r.json();
 }
 // opts.email pre-fills (and auto-runs) the lookup — used from the intake form
 // once a contact with an email is picked.
 function openCardOnFile(opts){
   opts = opts||{};
-  COF = { stage:'search', email:String(opts.email||'').trim(), who:opts.who||'', found:null, msg:'', needPin:!cofPinGet() };
+  COF = { stage:'search', email:String(opts.email||'').trim(), who:opts.who||'', found:null, msg:'' };
   cofDraw();
-  if(COF.email && /.+@.+\..+/.test(COF.email) && !COF.needPin) cofLookup();
+  if(COF.email && /.+@.+\..+/.test(COF.email)) cofLookup();
 }
 function closeCof(){ const el=document.getElementById('cwCof'); if(el) el.remove(); COF=null; }
 function cofDraw(){
@@ -3110,8 +3108,7 @@ function cofDraw(){
       ${msg}
       <div class="cof-lbl">Customer email</div>
       <div class="cof-row"><input type="email" class="cof-in" id="cofEmail" placeholder="customer@email.com" autocomplete="off" spellcheck="false" value="${esc(COF.email||'')}">
-        <button class="btn-primary" id="cofSearch">${ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')} Look up</button></div>
-      ${COF.needPin ? `<div class="cof-lbl">Team code</div><div class="cof-row"><input type="password" class="cof-in" id="cofPinInp" placeholder="Entered once per session" autocomplete="off"></div><p class="cof-sub" style="margin-top:-4px">Ask a manager for the card-on-file code.</p>` : ''}`;
+        <button class="btn-primary" id="cofSearch">${ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')} Look up</button></div>`;
   } else if(COF.stage==='busy'){
     inner = `${msg}<div class="pay-wait"><span class="dotp"></span>${esc(COF.busyLine||'Working…')}</div>`;
   } else if(COF.stage==='result'){
@@ -3165,8 +3162,6 @@ function cofDraw(){
   on('cofMore', ()=>{ COF.stage='result'; cofDraw(); });
   const em=document.getElementById('cofEmail');
   if(em){ em.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); cofLookup(); } }); if(!COF.email) setTimeout(()=>em.focus(),40); }
-  const pi=document.getElementById('cofPinInp');
-  if(pi){ pi.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); cofLookup(); } }); if(COF.email) setTimeout(()=>pi.focus(),40); }
   if(COF.stage==='frame' && COF.form && COF.form.token){
     const f=document.createElement('form');
     f.method='post'; f.action=COF.form.action; f.target='cofFrame'; f.style.display='none';
@@ -3180,24 +3175,19 @@ function cofDraw(){
 async function cofLookup(){
   if(!COF) return;
   const em=document.getElementById('cofEmail'); if(em) COF.email=em.value.trim();
-  const pi=document.getElementById('cofPinInp'); if(pi && pi.value.trim()) cofPinSet(pi.value.trim());
   if(!/.+@.+\..+/.test(COF.email||'')){ COF.msg="Enter the customer's email address."; COF.msgSoft=true; cofDraw(); return; }
-  if(!cofPinGet()){ COF.needPin=true; COF.msg='Enter the team code to use this tool.'; COF.msgSoft=true; cofDraw(); return; }
   COF.stage='busy'; COF.busyLine='Looking up '+COF.email+'…'; cofDraw();
   let d=null; try{ d=await cofApi({action:'lookup', email:COF.email}); }catch(e){}
   if(!COF) return;
   if(!d || !d.ok){
     const err=(d&&d.error)||'network';
     COF.stage='search';
-    if(err==='pin_not_configured'){ COF.msg='This tool is not enabled yet — an admin needs to set the CARD_ON_FILE_PIN environment variable in Vercel.'; }
-    else if(err==='pin_required'){ COF.needPin=true; COF.msgSoft=true; COF.msg='Enter the team code to use this tool.'; }
-    else if(err==='bad_pin'){ COF.needPin=true; try{ sessionStorage.removeItem('cwCofPin'); sessionStorage.removeItem('cwPpPin'); }catch(e){} COF.msg="That team code isn't right — try again."; }
-    else if(err==='duplicate_profiles'){ COF.msg='This email is on more than one Authorize.Net profile, so a lookup can’t pick one. Clean it up in Authorize.Net → Customer Information Manager (keep one profile per customer), then try again.'; }
+    if(err==='duplicate_profiles'){ COF.msg='This email is on more than one Authorize.Net profile, so a lookup can’t pick one. Clean it up in Authorize.Net → Customer Information Manager (keep one profile per customer), then try again.'; }
     else if(err==='anet_not_configured'){ COF.msg='Authorize.Net credentials are missing on the server (ANET_API_LOGIN_ID / ANET_TRANSACTION_KEY).'; }
     else COF.msg='Lookup failed ('+err+'). Try again in a moment.';
     cofDraw(); return;
   }
-  COF.needPin=false; COF.found=d; COF.stage='result'; cofDraw();
+  COF.found=d; COF.stage='result'; cofDraw();
 }
 async function cofOpen(mode){
   if(!COF) return;
