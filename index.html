@@ -171,6 +171,11 @@
   .choice .arr{color:#C6CEDA;flex:none;transition:color .15s,transform .15s}
   .choice .arr svg{width:17px;height:17px;display:block}
   .choice:hover .arr{color:var(--flow,var(--accent));transform:translateX(2px)}
+  .choices.tools{margin-top:12px}
+  .choice.tool{background:var(--paper-2);border-style:dashed}
+  .choice.tool .lab{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .choice.tool .lab svg{width:17px;height:17px;color:var(--flow,var(--accent))}
+  .choice.tool small{flex-basis:100%}
 
   /* ================= accordions ================= */
   .sec-lbl{
@@ -706,6 +711,10 @@ const FLOWS = {
           {label:"Immediate Need",sub:"Individual / Business \u2014 remote or onsite support",next:"retail"},
           {label:"Project Request",sub:"A defined project \u2014 scoped and quoted",next:"project"},
           {label:"Managed IT Services",sub:"For a business looking for someone to manage their IT",next:"business"}
+        ],
+        // Tools render under the choices but don't advance the flow — they open an overlay.
+        tools:[
+          {tool:"cof",label:"Card on file",sub:"Existing customer \u2014 look up the card on file by email, then update it or add a new one"}
         ]},
       // Native Autotask-backed intake forms (replaced the Cognito embeds 2026-09-16).
       // Rollback: swap native:"..." for the embed:
@@ -957,6 +966,10 @@ function checklistBlock(items){
 }
 function choicesBlock(choices){
   return `<div class="choices">`+choices.map((ch,i)=>`<button class="choice" data-choice="${i}"><span class="lab">${esc(ch.label)}${ch.sub?`<small>${esc(ch.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('')+`</div>`;
+}
+// Utility buttons under the choices (same look, dashed) — open an overlay instead of moving on.
+function toolsBlock(tools){
+  return `<div class="choices tools">`+tools.map(t=>`<button class="choice tool" data-tool="${esc(t.tool)}"><span class="lab">${ic('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>')} ${esc(t.label)}${t.sub?`<small>${esc(t.sub)}</small>`:''}</span><span class="arr">${ic('<path d="M9 18l6-6-6-6"/>')}</span></button>`).join('')+`</div>`;
 }
 
 /* ---- screens ---- */
@@ -2033,12 +2046,18 @@ function payAnetEvent(qstr){
     if(PAY){ PAY.stage='ready'; PAY.msgSoft=true; PAY.msg='No card was saved. Open the secure form again when the customer is ready.'; payRender(); }
   }
 }
-window.AuthorizeNetIFrame = { onReceiveCommunication: q=>payAnetEvent(String(q||'')) };
+// Route hosted-page events to whichever Authorize.Net iframe is on screen:
+// the card-on-file overlay (cofFrame) or the support-intake form (anetFrame).
+function anetEventRouter(qstr){
+  if(document.getElementById('cofFrame')) cofAnetEvent(qstr);
+  else payAnetEvent(qstr);
+}
+window.AuthorizeNetIFrame = { onReceiveCommunication: q=>anetEventRouter(String(q||'')) };
 window.addEventListener('message', ev=>{
   if(ev.origin !== location.origin) return;
   const d = ev.data || {};
   if(d.type==='cw-intake' && d.requestId) payAdopt(String(d.requestId));
-  else if(d.type==='cw-anet' && d.qstr) payAnetEvent(String(d.qstr));
+  else if(d.type==='cw-anet' && d.qstr) anetEventRouter(String(d.qstr));
 });
 
 // Abandon the current held request (it stays awaiting_payment in n8n as an
@@ -2374,7 +2393,7 @@ function sfRender(){
         <select class="sf-in" id="sf_contact"><option value="">${SF.contacts.length?'Select a contact…':'No contacts on this company yet'}</option>${opts}<option value="__new">+ Add a new contact</option></select></div></div>`;
       if(SF.contact){
         const c=SF.contact;
-        h+=`<div class="sf-info">${[c.phone?sfFmtPhone(c.phone):'', c.email].filter(Boolean).map(sfEsc).join(' · ') || 'No phone or email on file'}</div>`;
+        h+=`<div class="sf-info">${[c.phone?sfFmtPhone(c.phone):'', c.email].filter(Boolean).map(sfEsc).join(' · ') || 'No phone or email on file'}${c.email?` · <button type="button" class="sf-link" id="sfCof">Check card on file</button>`:''}</div>`;
       }
     }
     h+=`</div></div>`;
@@ -2499,6 +2518,7 @@ function sfWire(){
   on('sfAddCo','onclick',()=>{ SF.mode='newCompany'; SF.company=null; SF.contact=null; SF.contacts=null; sfRender(); const f=document.getElementById('sf_first'); if(f) f.focus(); });
   on('sfUnpick','onclick',()=>{ SF.mode='pick'; SF.company=null; SF.contact=null; SF.contacts=null; SF.msg=''; sfRender(); const q2=document.getElementById('sfQ'); if(q2) q2.focus(); });
   on('sfPickContact','onclick',()=>{ SF.mode='existing'; SF.contact=null; sfRender(); });
+  on('sfCof','onclick',()=>{ openCardOnFile({ email: (SF.contact&&SF.contact.email)||'', who: SF.company?SF.company.name:'' }); });
   const sel=document.getElementById('sf_contact');
   if(sel) sel.onchange=()=>{
     if(sel.value==='__new'){ SF.mode='newContact'; SF.contact=null; sfRender(); const f=document.getElementById('sf_first'); if(f) f.focus(); return; }
@@ -2668,6 +2688,7 @@ function renderStep(){
   if(step.extras) right+=extrasBlock(step.extras);
   if(step.sections){ right+=`<div class="sec-lbl">Pricing &amp; coverage</div>`+step.sections.map(sectionBlock).join(''); }
   if(step.choices) right+=choicesBlock(step.choices);
+  if(step.tools) right+=toolsBlock(step.tools);
   let full='';
   if(step.close){
     if(step.noAsk){ right+=computerCloseCards(); full=computerObjections(); }
@@ -2694,7 +2715,8 @@ function wireStep(step){
   wireRestart();
   wireApptButtons(()=>renderStep(), APPT_LINKS.computer);
 
-  stage.querySelectorAll('.choice').forEach(b=>b.onclick=()=>goNext(step.choices[+b.dataset.choice].next));
+  stage.querySelectorAll('.choice[data-choice]').forEach(b=>b.onclick=()=>goNext(step.choices[+b.dataset.choice].next));
+  stage.querySelectorAll('.choice[data-tool]').forEach(b=>b.onclick=()=>{ if(b.dataset.tool==='cof') openCardOnFile(); });
 
   // accordions
   stage.querySelectorAll('.acc-head').forEach(hd=>hd.onclick=()=>hd.parentElement.classList.toggle('open'));
@@ -3020,6 +3042,198 @@ function ssaWire(){
       touch(); return ssaRender();
     }
   });
+}
+
+
+/* =========================================================================
+   CARD ON FILE — SOHO tool. Look up an existing customer's Authorize.Net
+   payment profile by email (masked: brand, last 4, expiry), then open
+   Authorize.Net's hosted page to edit the card in place or add a new one.
+   Opens as an overlay so the intake form underneath keeps its state.
+   Backed by /api/card-on-file (team-code gated, entered once per session).
+   ========================================================================= */
+const COF_CSS = `<style>
+#cwCof .cof-wrap{position:fixed;inset:0;z-index:9998;background:rgba(17,23,33,.55);display:flex;align-items:flex-start;justify-content:center;padding:28px 18px;overflow-y:auto;font-family:var(--body)}
+#cwCof .cof-card{background:#fff;border-radius:16px;box-shadow:var(--sh-3);width:100%;max-width:640px;overflow:hidden}
+#cwCof .cof-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+#cwCof .cof-title{font-family:var(--disp);font-size:18px;font-weight:700;display:flex;align-items:center;gap:9px}
+#cwCof .cof-title svg{width:19px;height:19px;color:#0E7C86}
+#cwCof .cof-x{background:none;border:0;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:4px 6px}
+#cwCof .cof-body{padding:20px 22px 22px}
+#cwCof .cof-sub{font-size:13.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+#cwCof .cof-in{width:100%;box-sizing:border-box;font-family:var(--body);font-size:15px;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;outline:none;color:var(--ink);background:#fff}
+#cwCof .cof-in:focus{border-color:#0E7C86;box-shadow:0 0 0 3px rgba(14,124,134,.14)}
+#cwCof .cof-row{display:flex;gap:10px;margin:0 0 12px}
+#cwCof .cof-row .cof-in{flex:1}
+#cwCof .cof-lbl{font-size:12.5px;font-weight:600;color:var(--ink);margin:0 0 5px}
+#cwCof .cof-cards{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+#cwCof .pay-badge{margin:0}
+#cwCof .cof-exp{font-family:var(--body);font-weight:500;color:#4A6C5C;font-size:12px}
+#cwCof .pay-frame{margin-top:4px}
+#cwCof .pay-frame iframe{min-height:480px}
+#cwCof .cof-note{font-size:12.5px;color:var(--muted);background:var(--paper-2);border:1px solid var(--line-soft);border-radius:9px;padding:9px 12px;margin-top:14px;line-height:1.5}
+#cwCof .cof-note b{color:var(--ink)}
+</style>`;
+let COF = null;
+function cofPinGet(){ try{ return sessionStorage.getItem('cwCofPin')||sessionStorage.getItem('cwPpPin')||''; }catch(e){ return ''; } }
+function cofPinSet(v){ try{ sessionStorage.setItem('cwCofPin', v); }catch(e){} }
+async function cofApi(payload){
+  const r = await fetch('/api/card-on-file', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(Object.assign({ pin: cofPinGet() }, payload)) });
+  return await r.json();
+}
+// opts.email pre-fills (and auto-runs) the lookup — used from the intake form
+// once a contact with an email is picked.
+function openCardOnFile(opts){
+  opts = opts||{};
+  COF = { stage:'search', email:String(opts.email||'').trim(), who:opts.who||'', found:null, msg:'', needPin:!cofPinGet() };
+  cofDraw();
+  if(COF.email && /.+@.+\..+/.test(COF.email) && !COF.needPin) cofLookup();
+}
+function closeCof(){ const el=document.getElementById('cwCof'); if(el) el.remove(); COF=null; }
+function cofDraw(){
+  if(!COF) return;
+  let el = document.getElementById('cwCof');
+  if(!el){ el = document.createElement('div'); el.id='cwCof'; document.body.appendChild(el); }
+  const msg = COF.msg ? `<div class="pay-msg${COF.msgSoft?' soft':''}">${esc(COF.msg)}</div>` : '';
+  COF.msgSoft = false;
+  const cardIc = ic('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>');
+  const badge = c=>{
+    let exp='';
+    const m=String(c.expiration||'').match(/^(\d{4})-(\d{2})$/);
+    if(m) exp=` <span class="cof-exp">exp ${m[2]}/${m[1].slice(2)}</span>`;
+    return `<span class="pay-badge">${esc((c.brand||'Card')+(c.last4?' •••• '+c.last4:''))}${exp}</span>`;
+  };
+  let inner='';
+  if(COF.stage==='search'){
+    inner = `<p class="cof-sub">Enter the customer's email to see the card Authorize.Net has on file (last 4 only). From there you can edit it in place or add a new one on Authorize.Net's secure form — card numbers never touch the Call Console.</p>
+      ${msg}
+      <div class="cof-lbl">Customer email</div>
+      <div class="cof-row"><input type="email" class="cof-in" id="cofEmail" placeholder="customer@email.com" autocomplete="off" spellcheck="false" value="${esc(COF.email||'')}">
+        <button class="btn-primary" id="cofSearch">${ic('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')} Look up</button></div>
+      ${COF.needPin ? `<div class="cof-lbl">Team code</div><div class="cof-row"><input type="password" class="cof-in" id="cofPinInp" placeholder="Entered once per session" autocomplete="off"></div><p class="cof-sub" style="margin-top:-4px">Ask a manager for the card-on-file code.</p>` : ''}`;
+  } else if(COF.stage==='busy'){
+    inner = `${msg}<div class="pay-wait"><span class="dotp"></span>${esc(COF.busyLine||'Working…')}</div>`;
+  } else if(COF.stage==='result'){
+    const f = COF.found || {};
+    if(f.found){
+      const cards = (f.cards&&f.cards.length) ? f.cards.map(badge).join('') : '<span class="hint">Profile exists, but no card is stored on it yet</span>';
+      const hasCards = !!(f.cards&&f.cards.length);
+      inner = `<p class="cof-sub"><b>${esc(COF.email)}</b>${COF.who?' · '+esc(COF.who):''}${f.description?`<br><span class="hint">${esc(f.description)}</span>`:''}</p>
+        <div class="cof-cards">${cards}</div>${msg}
+        <div class="pay-actions">
+          ${hasCards ? `<button class="btn-primary" id="cofManage">${cardIc} Update / manage cards</button>` : ''}
+          <button class="${hasCards?'btn-ghost':'btn-primary'}" id="cofAdd">${hasCards?'':cardIc+' '}Add a new card</button>
+          <button class="btn-ghost" id="cofAgain">Different email</button>
+        </div>
+        ${hasCards ? `<div class="cof-note"><b>Replacing an expired or reissued card?</b> Use <b>Update / manage cards</b> and edit the existing entry in place, so anything already set to charge that card keeps working. Add a second card only when the customer genuinely wants both on file.</div>` : ''}`;
+    } else {
+      inner = `<p class="cof-sub">Authorize.Net has <b>no payment profile</b> for <b>${esc(COF.email)}</b>. If they came through the intake with a different email, try that one — otherwise you can create a profile and add a card now.</p>${msg}
+        <div class="pay-actions">
+          <button class="btn-primary" id="cofAdd">${cardIc} Create profile &amp; add card</button>
+          <button class="btn-ghost" id="cofAgain">Different email</button>
+        </div>`;
+    }
+  } else if(COF.stage==='frame'){
+    inner = `<p class="cof-sub"><b>${esc(COF.email)}</b> — read the card details from the caller and enter them below. This form is served by <b>Authorize.Net</b>.</p>
+      ${msg}
+      <div class="pay-frame"><iframe id="cofFrame" name="cofFrame" title="Authorize.Net payment manager" allow="payment"></iframe></div>
+      <div class="pay-actions"><button class="btn-ghost" id="cofDone">Done — check saved cards</button></div>`;
+  } else if(COF.stage==='saved'){
+    const f = COF.found || {};
+    const cards = (f.cards&&f.cards.length) ? f.cards.map(badge).join('') : '';
+    inner = `<div class="pay-title"><span class="tick">${ic('<path d="M20 6 9 17l-5-5"/>')}</span>Card on file updated</div>
+      <div class="cof-cards" style="margin-top:10px">${cards}</div>
+      <p class="cof-sub">Authorize.Net now has this on file for <b>${esc(COF.email)}</b>.</p>
+      <div class="pay-actions">
+        <button class="btn-primary" id="cofFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Done</button>
+        <button class="btn-ghost" id="cofMore">Manage again</button>
+      </div>`;
+  }
+  el.innerHTML = COF_CSS + `<div class="cof-wrap" id="cofWrap"><div class="cof-card">
+    <div class="cof-top"><div class="cof-title">${cardIc} Card on file</div><button class="cof-x" id="cofX" title="Close">&times;</button></div>
+    <div class="cof-body">${inner}</div></div></div>`;
+  const on=(id,fn)=>{ const b=document.getElementById(id); if(b) b.onclick=fn; };
+  on('cofX', closeCof);
+  document.getElementById('cofWrap').addEventListener('mousedown', ev=>{ if(ev.target.id==='cofWrap' && COF && COF.stage!=='frame') closeCof(); });
+  on('cofSearch', cofLookup);
+  on('cofManage', ()=>cofOpen('manage'));
+  on('cofAdd', ()=>cofOpen('add'));
+  on('cofAgain', ()=>{ COF.stage='search'; COF.found=null; COF.email=''; cofDraw(); });
+  on('cofDone', cofAfterFrame);
+  on('cofFinish', closeCof);
+  on('cofMore', ()=>{ COF.stage='result'; cofDraw(); });
+  const em=document.getElementById('cofEmail');
+  if(em){ em.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); cofLookup(); } }); if(!COF.email) setTimeout(()=>em.focus(),40); }
+  const pi=document.getElementById('cofPinInp');
+  if(pi){ pi.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); cofLookup(); } }); if(COF.email) setTimeout(()=>pi.focus(),40); }
+  if(COF.stage==='frame' && COF.form && COF.form.token){
+    const f=document.createElement('form');
+    f.method='post'; f.action=COF.form.action; f.target='cofFrame'; f.style.display='none';
+    const inp=document.createElement('input');
+    inp.type='hidden'; inp.name='token'; inp.value=COF.form.token;
+    f.appendChild(inp); document.body.appendChild(f);
+    f.submit(); setTimeout(()=>{ try{f.remove();}catch(e){} },0);
+    COF.form=null;   // one-shot; reopening fetches a fresh token
+  }
+}
+async function cofLookup(){
+  if(!COF) return;
+  const em=document.getElementById('cofEmail'); if(em) COF.email=em.value.trim();
+  const pi=document.getElementById('cofPinInp'); if(pi && pi.value.trim()) cofPinSet(pi.value.trim());
+  if(!/.+@.+\..+/.test(COF.email||'')){ COF.msg="Enter the customer's email address."; COF.msgSoft=true; cofDraw(); return; }
+  if(!cofPinGet()){ COF.needPin=true; COF.msg='Enter the team code to use this tool.'; COF.msgSoft=true; cofDraw(); return; }
+  COF.stage='busy'; COF.busyLine='Looking up '+COF.email+'…'; cofDraw();
+  let d=null; try{ d=await cofApi({action:'lookup', email:COF.email}); }catch(e){}
+  if(!COF) return;
+  if(!d || !d.ok){
+    const err=(d&&d.error)||'network';
+    COF.stage='search';
+    if(err==='pin_not_configured'){ COF.msg='This tool is not enabled yet — an admin needs to set the CARD_ON_FILE_PIN environment variable in Vercel.'; }
+    else if(err==='pin_required'){ COF.needPin=true; COF.msgSoft=true; COF.msg='Enter the team code to use this tool.'; }
+    else if(err==='bad_pin'){ COF.needPin=true; try{ sessionStorage.removeItem('cwCofPin'); sessionStorage.removeItem('cwPpPin'); }catch(e){} COF.msg="That team code isn't right — try again."; }
+    else if(err==='duplicate_profiles'){ COF.msg='This email is on more than one Authorize.Net profile, so a lookup can’t pick one. Clean it up in Authorize.Net → Customer Information Manager (keep one profile per customer), then try again.'; }
+    else if(err==='anet_not_configured'){ COF.msg='Authorize.Net credentials are missing on the server (ANET_API_LOGIN_ID / ANET_TRANSACTION_KEY).'; }
+    else COF.msg='Lookup failed ('+err+'). Try again in a moment.';
+    cofDraw(); return;
+  }
+  COF.needPin=false; COF.found=d; COF.stage='result'; cofDraw();
+}
+async function cofOpen(mode){
+  if(!COF) return;
+  COF.stage='busy'; COF.busyLine="Opening Authorize.Net's secure page…"; cofDraw();
+  let d=null; try{ d=await cofApi({action:'open', email:COF.email, mode:mode}); }catch(e){}
+  if(!COF) return;
+  if(!d || !d.ok || !d.token){
+    COF.stage='result';
+    COF.msg="Couldn't open the secure page"+(d&&d.error?' ('+d.error+')':'')+'. Try again.';
+    cofDraw(); return;
+  }
+  COF.form={ token:d.token, action:d.action };
+  COF.stage='frame'; cofDraw();
+}
+async function cofAfterFrame(){
+  if(!COF) return;
+  COF.stage='busy'; COF.busyLine='Checking the stored cards…'; cofDraw();
+  let d=null; try{ d=await cofApi({action:'lookup', email:COF.email}); }catch(e){}
+  if(!COF) return;
+  if(d && d.ok && d.found && d.cards && d.cards.length){ COF.found=d; COF.stage='saved'; }
+  else { if(d && d.ok) COF.found=d; COF.stage='result'; COF.msgSoft=true; COF.msg='No saved card yet.'; }
+  cofDraw();
+}
+function cofAnetEvent(qstr){
+  const params={};
+  String(qstr||'').split('&').forEach(kv=>{ const i=kv.indexOf('='); if(i>0) params[decodeURIComponent(kv.slice(0,i))]=decodeURIComponent(kv.slice(i+1)); });
+  const a=params.action||'';
+  if(a==='resizeWindow'){
+    const fr=document.getElementById('cofFrame');
+    const h=parseInt(params.height,10);
+    if(fr && h>0) fr.style.height=Math.min(Math.max(h,320),1400)+'px';
+  } else if(a==='successfulSave'){
+    cofAfterFrame();
+  } else if(a==='cancel'){
+    if(COF){ COF.stage='result'; COF.msgSoft=true; COF.msg='Nothing was changed.'; cofDraw(); }
+  }
 }
 
 const ADMIN_CSS = `<style>
