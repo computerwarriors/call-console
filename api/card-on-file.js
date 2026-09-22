@@ -1,9 +1,9 @@
 // =============================================================================
 // Call Console — card on file lookup / manager  (Vercel serverless function)
 //
-//   POST /api/card-on-file  { action: "lookup", email, pin }
+//   POST /api/card-on-file  { action: "lookup", email }
 //     -> { ok, found, cards:[{brand,last4,expiration}], description }
-//   POST /api/card-on-file  { action: "open", email, pin, mode?: "manage"|"add" }
+//   POST /api/card-on-file  { action: "open", email, mode?: "manage"|"add" }
 //     -> { ok, token, action, mode }            (show the hosted page)
 //
 // Lets the SOHO team check what card an existing customer has on file with
@@ -21,11 +21,9 @@
 // were NOT carried over: duplicates are reported so the team can clean them up
 // in Authorize.Net → Manage Customers, nothing here deletes anything.
 //
-// Because this endpoint can open the payment manager for ANY email, it is
-// gated by a shared team code entered once per browser session:
-//   CARD_ON_FILE_PIN      (env var; PROTECTION_PLAN_PIN is honoured as a
-//                          fallback so the old code keeps working if it is
-//                          still set). Endpoint refuses to work with neither.
+// Not gated (decision 2026-09-22): the lookup only ever returns Authorize.Net's
+// masked values, and card entry/edit happens on the hosted page. The console
+// URL itself is the access control.
 // Env vars: ANET_API_LOGIN_ID, ANET_TRANSACTION_KEY (see _anet.js)
 // Optional: ANET_COMM_ORIGIN
 // =============================================================================
@@ -47,12 +45,6 @@ module.exports = async (req, res) => {
     let body = req.body;
     if (typeof body === "string") { try { body = JSON.parse(body); } catch (_) { body = {}; } }
     body = body || {};
-
-    const PIN = process.env.CARD_ON_FILE_PIN || process.env.PROTECTION_PLAN_PIN || "";
-    if (!PIN) { res.status(200).json({ ok: false, error: "pin_not_configured" }); return; }
-    const pin = String(body.pin || "");
-    if (!pin) { res.status(200).json({ ok: false, error: "pin_required" }); return; }
-    if (pin !== PIN) { res.status(200).json({ ok: false, error: "bad_pin" }); return; }
 
     const action = String(body.action || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
