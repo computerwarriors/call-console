@@ -1228,11 +1228,10 @@ function renderResult(){
   const right=(rt==="__other"?partsLookupBlock():"")+computerCloseCards();
   const full=deviceObjections();
 
-  const footer=`<button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="drFinish">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
+  const footer=`<button class="btn-ghost" id="drBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button>`;
   stage.innerHTML=screen({flowbar:drChrome(b.color,`${b.label}${model?' \u00B7 '+esc(model):''}`,4,4),accent:b.color,title:who,sub,left,right,full,footer});
 
   stage.querySelectorAll('#drBack').forEach(x=>x.onclick=drBack);
-  document.getElementById('drFinish').onclick=goHome;
   stage.querySelectorAll('.calc').forEach(setupCalc);
   if(feed){ const sp=stage.querySelector('.say-price'); if(sp) sp.textContent=money(feed.price); }
   if(rt==="__other"){
@@ -1686,7 +1685,7 @@ function renderBuyback(){
       <button class="back" id="bbBack">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button>
       <span class="flowtag"><span class="dot" style="background:${BUYBACK_META.color}"></span>Trade-in</span>
     </div>
-    <div class="panel" style="--flow:${BUYBACK_META.color}"><div class="panel-body">
+    <div class="panel" style="--flow:${BUYBACK_META.color}">${restartBtn()}<div class="panel-body">
       <div class="eyebrow">Buy-back</div>
       <h2 class="step-title">Sell or trade in a device</h2>
       <p class="step-sub">Look up what we can offer — phones, tablets, Mac, game systems, Chromebooks and watches.</p>
@@ -1698,6 +1697,7 @@ function renderBuyback(){
       </div>
     </div></div>`;
   document.getElementById('bbBack').onclick=goHome;
+  wireRestart();
   wireBuybackFrame();
 }
 // Grow the frame to fit the widget. Same-origin, so we can read its height;
@@ -2697,7 +2697,7 @@ function renderStep(){
   if(step.checklist) right+=checklistBlock(step.checklist);
 
   let footer='';
-  if(step.end) footer=`<button class="btn-ghost" id="prevBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button><button class="btn-primary push" id="finishBtn">${ic('<path d="M20 6 9 17l-5-5"/>')} Finish call</button>`;
+  if(step.end) footer=`<button class="btn-ghost" id="prevBtn">${ic('<path d="M15 18l-6-6 6-6"/>')} Back</button>`;
   else if(step.choices) footer=`<button class="btn-ghost" id="prevBtn">Back</button><span class="push hint">Pick an option to continue</span>`;
   else footer=`<button class="btn-ghost" id="prevBtn">Back</button><button class="btn-primary push" id="nextBtn">Next ${ic('<path d="M9 18l6-6-6-6"/>')}</button>`;
 
@@ -2711,7 +2711,6 @@ function wireStep(step){
   document.getElementById('backBtn').onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} else renderHome(); };
   const prev=document.getElementById('prevBtn'); if(prev) prev.onclick=()=>{ if(history.length){state.idx=history.pop();renderStep();} else renderHome(); };
   const next=document.getElementById('nextBtn'); if(next) next.onclick=()=>goNext(step.next);
-  const finish=document.getElementById('finishBtn'); if(finish) finish.onclick=goHome;
   wireRestart();
   wireApptButtons(()=>renderStep(), APPT_LINKS.computer);
 
